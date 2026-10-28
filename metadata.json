@@ -1,0 +1,8 @@
+{
+  "name": "Scene Hai?",
+  "description": "Plan kam, scene zyada. Discover and create real-life hangouts around you.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
