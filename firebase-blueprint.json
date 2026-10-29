@@ -1,4 +1,191 @@
 {
-  "entities": {},
-  "firestore": {}
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information stored in Firestore for Scene Hai?",
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "User display name shown across the app"
+        },
+        "bio": {
+          "type": "string",
+          "description": "Short user bio or intro, max 160 characters"
+        },
+        "city": {
+          "type": "string",
+          "description": "Primary city for local scenes (e.g. Lahore, Karachi, Islamabad)"
+        },
+        "area": {
+          "type": "string",
+          "description": "Local neighborhood or area"
+        },
+        "interests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Categories of activities the user is interested in"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of initial profile creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of latest profile update"
+        }
+      },
+      "required": ["displayName", "createdAt", "updatedAt"]
+    },
+    "Scene": {
+      "title": "Scene",
+      "description": "Real scene or meetup created by a host in Scene Hai?",
+      "type": "object",
+      "properties": {
+        "hostId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the creator"
+        },
+        "hostDisplayName": {
+          "type": "string",
+          "description": "Snapshot of host display name from profile at creation time"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the plan (5 to 70 characters)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of expectations and vibe (15 to 500 characters)"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["sports", "food", "gaming", "outdoors", "tech", "creative", "music"],
+          "description": "Activity category"
+        },
+        "city": {
+          "type": "string",
+          "description": "Target city in Pakistan (e.g. Lahore, Karachi, Islamabad)"
+        },
+        "area": {
+          "type": "string",
+          "description": "Area or neighborhood"
+        },
+        "venue": {
+          "type": "string",
+          "description": "General meetup place description (not exact private address)"
+        },
+        "startsAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Firestore Timestamp when scene starts"
+        },
+        "timezone": {
+          "type": "string",
+          "enum": ["Asia/Karachi"],
+          "description": "Pakistan local timezone"
+        },
+        "budgetPerPerson": {
+          "type": "number",
+          "description": "Estimated cost per person in PKR"
+        },
+        "maxParticipants": {
+          "type": "integer",
+          "description": "Maximum number of attendees allowed (2 to 100)"
+        },
+        "privacy": {
+          "type": "string",
+          "enum": ["public", "private"],
+          "description": "Public or private discovery"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "cancelled"],
+          "description": "Active or cancelled"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of initial creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of latest update"
+        }
+      },
+      "required": [
+        "hostId",
+        "hostDisplayName",
+        "title",
+        "description",
+        "category",
+        "city",
+        "area",
+        "startsAt",
+        "timezone",
+        "budgetPerPerson",
+        "maxParticipants",
+        "privacy",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "JoinRequest": {
+      "title": "JoinRequest",
+      "description": "Real join request submitted by a user for an upcoming scene in Scene Hai?",
+      "type": "object",
+      "properties": {
+        "requesterId": {
+          "type": "string",
+          "description": "Authenticated Firebase UID of the requester"
+        },
+        "requesterDisplayName": {
+          "type": "string",
+          "description": "Snapshot of requester display name from their profile"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "withdrawn"],
+          "description": "Current status of the join request"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when request was initially created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when request was last updated"
+        }
+      },
+      "required": ["requesterId", "requesterDisplayName", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Persistent Cloud Firestore user profiles indexed by Firebase Auth UID. Each user can only read and write their own profile."
+    },
+    "/scenes/{sceneId}": {
+      "schema": {
+        "$ref": "#/entities/Scene"
+      },
+      "description": "Real scenes and meetups. Public active scenes are readable by anyone. Hosts can read, update, or cancel their own scenes."
+    },
+    "/scenes/{sceneId}/joinRequests/{requesterUid}": {
+      "schema": {
+        "$ref": "#/entities/JoinRequest"
+      },
+      "description": "Real join requests for a scene indexed by requester UID. Requesters can create, view, withdraw, and re-submit their request. Hosts can view requests for their hosted scenes."
+    }
+  }
 }

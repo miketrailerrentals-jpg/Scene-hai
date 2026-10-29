@@ -1,9 +1,165 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Access denied until Phase 3 schema and security rules are implemented
+    // Default deny: strictly forbid access to any document unless explicitly permitted
     match /{document=**} {
       allow read, write: if false;
+    }
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasOnly(['displayName', 'bio', 'city', 'area', 'interests', 'createdAt', 'updatedAt'])
+        && data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 50
+        && (!('bio' in data) || (data.bio is string && data.bio.size() <= 160))
+        && (!('city' in data) || (data.city is string && data.city.size() <= 50))
+        && (!('area' in data) || (data.area is string && data.area.size() <= 60))
+        && (!('interests' in data) || (data.interests is list && data.interests.size() <= 20))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidScene(data) {
+      return data.keys().hasOnly([
+        'hostId', 'hostDisplayName', 'title', 'description', 'category',
+        'city', 'area', 'venue', 'startsAt', 'timezone', 'budgetPerPerson',
+        'maxParticipants', 'privacy', 'status', 'createdAt', 'updatedAt'
+      ])
+        && data.hostId is string
+        && data.hostDisplayName is string && data.hostDisplayName.size() > 0 && data.hostDisplayName.size() <= 50
+        && data.title is string && data.title.size() >= 5 && data.title.size() <= 70
+        && data.description is string && data.description.size() >= 15 && data.description.size() <= 500
+        && data.category in ['sports', 'food', 'gaming', 'outdoors', 'tech', 'creative', 'music']
+        && data.city is string && data.city.size() > 0 && data.city.size() <= 50
+        && data.area is string && data.area.size() > 0 && data.area.size() <= 60
+        && (!('venue' in data) || (data.venue is string && data.venue.size() <= 100))
+        && data.startsAt is timestamp
+        && data.timezone == 'Asia/Karachi'
+        && (data.budgetPerPerson is number || data.budgetPerPerson is int) && data.budgetPerPerson >= 0 && data.budgetPerPerson <= 500000
+        && data.maxParticipants is int && data.maxParticipants >= 2 && data.maxParticipants <= 100
+        && data.privacy in ['public', 'private']
+        && data.status in ['active', 'cancelled']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidJoinRequest(data) {
+      return data.keys().hasOnly(['requesterId', 'requesterDisplayName', 'status', 'createdAt', 'updatedAt'])
+        && data.requesterId is string
+        && data.requesterDisplayName is string && data.requesterDisplayName.size() > 0 && data.requesterDisplayName.size() <= 50
+        && data.status in ['pending', 'withdrawn']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // User profile documents: users/{userId}
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+
+      allow create: if isOwner(userId)
+        && isValidUser(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidUser(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'bio', 'city', 'area', 'interests', 'updatedAt']);
+
+      allow delete: if false;
+    }
+
+    // Scene documents: scenes/{sceneId}
+    match /scenes/{sceneId} {
+      // Public active scenes can be read by anyone (including guests).
+      // Hosts can read their own scenes even if private or cancelled.
+      allow read: if (resource.data.privacy == 'public' && resource.data.status == 'active')
+        || (isAuthenticated() && resource.data.hostId == request.auth.uid);
+
+      // Authenticated users with valid profiles can create active scenes.
+      // StartsAt must be in the future, createdAt & updatedAt must be server timestamp.
+      // Host display name must match the authenticated profile.
+      allow create: if isAuthenticated()
+        && request.resource.data.hostId == request.auth.uid
+        && request.resource.data.status == 'active'
+        && request.resource.data.startsAt > request.time
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && request.resource.data.hostDisplayName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.displayName
+        && isValidScene(request.resource.data);
+
+      // Only the original host can update their scene. Immutable fields are protected.
+      allow update: if isAuthenticated()
+        && resource.data.hostId == request.auth.uid
+        && request.resource.data.hostId == resource.data.hostId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.hostDisplayName == resource.data.hostDisplayName
+        && request.resource.data.updatedAt == request.time
+        && isValidScene(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'description', 'category', 'city', 'area', 'venue',
+          'startsAt', 'budgetPerPerson', 'maxParticipants', 'privacy', 'status', 'updatedAt'
+        ]);
+
+      // Deletion is strictly forbidden
+      allow delete: if false;
+
+      // Real join requests: scenes/{sceneId}/joinRequests/{requesterUid}
+      match /joinRequests/{requesterUid} {
+        // Read: requester can read their own request; host of the parent scene can read all requests
+        allow read: if isAuthenticated() && (
+          request.auth.uid == requesterUid ||
+          get(/databases/$(database)/documents/scenes/$(sceneId)).data.hostId == request.auth.uid
+        );
+
+        // Create: authenticated users can request to join upcoming, active, public scenes
+        allow create: if isAuthenticated()
+          && request.auth.uid == requesterUid
+          && request.resource.data.requesterId == request.auth.uid
+          && request.resource.data.status == 'pending'
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time
+          && isValidJoinRequest(request.resource.data)
+          && exists(/databases/$(database)/documents/scenes/$(sceneId))
+          && get(/databases/$(database)/documents/scenes/$(sceneId)).data.hostId != request.auth.uid
+          && get(/databases/$(database)/documents/scenes/$(sceneId)).data.privacy == 'public'
+          && get(/databases/$(database)/documents/scenes/$(sceneId)).data.status == 'active'
+          && get(/databases/$(database)/documents/scenes/$(sceneId)).data.startsAt > request.time
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && request.resource.data.requesterDisplayName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.displayName;
+
+        // Update: only requester can toggle between pending and withdrawn
+        allow update: if isAuthenticated()
+          && request.auth.uid == requesterUid
+          && resource.data.requesterId == request.auth.uid
+          && request.resource.data.requesterId == resource.data.requesterId
+          && request.resource.data.requesterDisplayName == resource.data.requesterDisplayName
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.updatedAt == request.time
+          && isValidJoinRequest(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          && (
+            (resource.data.status == 'pending' && request.resource.data.status == 'withdrawn')
+            || (
+              resource.data.status == 'withdrawn'
+              && request.resource.data.status == 'pending'
+              && exists(/databases/$(database)/documents/scenes/$(sceneId))
+              && get(/databases/$(database)/documents/scenes/$(sceneId)).data.status == 'active'
+              && get(/databases/$(database)/documents/scenes/$(sceneId)).data.startsAt > request.time
+            )
+          );
+
+        // Delete: strictly forbidden
+        allow delete: if false;
+      }
     }
   }
 }
