@@ -1,0 +1,118 @@
+i  emulators: Starting emulators: firestore
+i  emulators: Detected demo project ID "demo-no-project", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+i  firestore: Firestore Emulator logging to firestore-debug.log
+✔  firestore: Firestore Emulator was started in standard edition.
+✔  firestore: Firestore Emulator UI websocket is running on 9150.
+i  Running script: npx tsx --test tests/firestore-security.test.ts
+TAP version 13
+# [2026-11-03T14:18:04.599Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x5ef80237 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L6, false for 'update' @ L128
+# [2026-11-03T14:18:04.630Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x5ef80238 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L6, false for 'create' @ L204, false for 'update' @ L6, false for 'update' @ L222
+# Subtest: Scene Hai? Firestore Security Rules Verification Suite
+    # Subtest: 1. Unauthenticated users: can read public scene, but CANNOT write or read private details
+    ok 1 - 1. Unauthenticated users: can read public scene, but CANNOT write or read private details
+      ---
+      duration_ms: 604.913952
+      type: 'test'
+      ...
+# [2026-11-03T14:18:04.780Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x5ef8023c error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L6, false for 'update' @ L86
+    # Subtest: 2. Profile Isolation: User can only read and write their own profile
+    ok 2 - 2. Profile Isolation: User can only read and write their own profile
+      ---
+      duration_ms: 148.328858
+      type: 'test'
+      ...
+# [2026-11-03T14:18:04.944Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x5ef8023f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L6, evaluation error at L204:26 for 'create' @ L204, false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'create' @ L6, false for 'create' @ L204
+# [2026-11-03T14:18:04.969Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x5ef8023e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'create' @ L6, false for 'create' @ L204, false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'create' @ L6, false for 'create' @ L204
+    # Subtest: 3. Join Request: Requester can submit pending request; Host cannot request own scene
+    ok 3 - 3. Join Request: Requester can submit pending request; Host cannot request own scene
+      ---
+      duration_ms: 189.046064
+      type: 'test'
+      ...
+    # Subtest: 4. Third-party privacy: Strangers CANNOT read other users join requests
+    ok 4 - 4. Third-party privacy: Strangers CANNOT read other users join requests
+      ---
+      duration_ms: 178.985378
+      type: 'test'
+      ...
+# [2026-11-03T14:18:05.350Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x5ef80248 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, Property lastApprovedRequesterId is undefined on object. for 'update' @ L128
+# [2026-11-03T14:18:05.374Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x5ef80249 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, false for 'update' @ L222
+    # Subtest: 5. Atomic Host Approval: requires synchronous request update + scene counter increment
+    ok 5 - 5. Atomic Host Approval: requires synchronous request update + scene counter increment
+      ---
+      duration_ms: 287.434224
+      type: 'test'
+      ...
+# [2026-11-03T14:18:05.561Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x5ef8024e error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, false for 'update' @ L222
+# [2026-11-03T14:18:05.617Z]  @firebase/firestore: Firestore (13.1.0): GrpcConnection RPC 'Write' stream 0x5ef8024f error. Code: 7 Message: 7 PERMISSION_DENIED: 
+# false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, false for 'update' @ L222
+    # Subtest: 6. Host Decline: updates request to declined, does NOT change capacity
+    ok 6 - 6. Host Decline: updates request to declined, does NOT change capacity
+      ---
+      duration_ms: 182.168471
+      type: 'test'
+      ...
+    # Subtest: 7. Participant Leaves: atomically decrements approvedCount and updates status to left
+    ok 7 - 7. Participant Leaves: atomically decrements approvedCount and updates status to left
+      ---
+      duration_ms: 147.01721
+      type: 'test'
+      ...
+    # Subtest: 8. Host Removes Participant: atomically decrements approvedCount
+    ok 8 - 8. Host Removes Participant: atomically decrements approvedCount
+      ---
+      duration_ms: 143.550834
+      type: 'test'
+      ...
+    # Subtest: 9. Venue Privacy: Only Host and Approved Participants can read exact location
+    ok 9 - 9. Venue Privacy: Only Host and Approved Participants can read exact location
+      ---
+      duration_ms: 185.953804
+      type: 'test'
+      ...
+    # Subtest: 10. Capacity Overflow & Concurrent Race: Approval fails when event is full
+    ok 10 - 10. Capacity Overflow & Concurrent Race: Approval fails when event is full
+      ---
+      duration_ms: 88.727594
+      type: 'test'
+      ...
+    # Subtest: 11. Cancelled and Expired Scenes: Reject all new approvals
+    ok 11 - 11. Cancelled and Expired Scenes: Reject all new approvals
+      ---
+      duration_ms: 93.808007
+      type: 'test'
+      ...
+    # Subtest: 12. Concurrent Approvals against the final available seat: Exactly ONE succeeds, overflow is blocked
+    ok 12 - 12. Concurrent Approvals against the final available seat: Exactly ONE succeeds, overflow is blocked
+      ---
+      duration_ms: 127.90333
+      type: 'test'
+      ...
+    1..12
+ok 1 - Scene Hai? Firestore Security Rules Verification Suite
+  ---
+  duration_ms: 3627.994446
+  type: 'suite'
+  ...
+1..1
+# tests 12
+# suites 1
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4180.682828
+✔  Script exited successfully (code 0)
+i  emulators: Shutting down emulators.
+i  firestore: Stopping Firestore Emulator
+i  hub: Stopping emulator hub
+i  logging: Stopping Logging Emulator

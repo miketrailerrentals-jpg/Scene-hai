@@ -97,6 +97,10 @@
           "type": "integer",
           "description": "Maximum number of attendees allowed (2 to 100)"
         },
+        "approvedCount": {
+          "type": "integer",
+          "description": "Number of approved participants excluding the host (0 to maxParticipants - 1)"
+        },
         "privacy": {
           "type": "string",
           "enum": ["public", "private"],
@@ -151,8 +155,17 @@
         },
         "status": {
           "type": "string",
-          "enum": ["pending", "withdrawn"],
+          "enum": ["pending", "withdrawn", "approved", "declined", "left", "removed"],
           "description": "Current status of the join request"
+        },
+        "decidedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when decision was made by host"
+        },
+        "decidedBy": {
+          "type": "string",
+          "description": "Host UID who approved, declined, or removed this request"
         },
         "createdAt": {
           "type": "string",
@@ -166,6 +179,27 @@
         }
       },
       "required": ["requesterId", "requesterDisplayName", "status", "createdAt", "updatedAt"]
+    },
+    "ScenePrivateDetails": {
+      "title": "ScenePrivateDetails",
+      "description": "Confidential meetup details (exact venue address, host notes) readable only by the host and approved attendees",
+      "type": "object",
+      "properties": {
+        "venue": {
+          "type": "string",
+          "description": "Exact venue address or meetup instructions"
+        },
+        "hostNotes": {
+          "type": "string",
+          "description": "Optional host instructions or contact info"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of update"
+        }
+      },
+      "required": ["venue", "updatedAt"]
     }
   },
   "firestore": {
@@ -186,6 +220,12 @@
         "$ref": "#/entities/JoinRequest"
       },
       "description": "Real join requests for a scene indexed by requester UID. Requesters can create, view, withdraw, and re-submit their request. Hosts can view requests for their hosted scenes."
+    },
+    "/scenes/{sceneId}/privateDetails/{detailDoc}": {
+      "schema": {
+        "$ref": "#/entities/ScenePrivateDetails"
+      },
+      "description": "Exact meetup location and private host notes accessible ONLY by the host and approved participants."
     }
   }
 }

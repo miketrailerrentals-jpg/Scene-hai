@@ -29,7 +29,8 @@ service cloud.firestore {
       return data.keys().hasOnly([
         'hostId', 'hostDisplayName', 'title', 'description', 'category',
         'city', 'area', 'venue', 'startsAt', 'timezone', 'budgetPerPerson',
-        'maxParticipants', 'privacy', 'status', 'createdAt', 'updatedAt'
+        'maxParticipants', 'approvedCount', 'lastApprovedRequesterId', 'lastRemovedRequesterId',
+        'privacy', 'status', 'createdAt', 'updatedAt'
       ])
         && data.hostId is string
         && data.hostDisplayName is string && data.hostDisplayName.size() > 0 && data.hostDisplayName.size() <= 50
@@ -43,6 +44,10 @@ service cloud.firestore {
         && data.timezone == 'Asia/Karachi'
         && (data.budgetPerPerson is number || data.budgetPerPerson is int) && data.budgetPerPerson >= 0 && data.budgetPerPerson <= 500000
         && data.maxParticipants is int && data.maxParticipants >= 2 && data.maxParticipants <= 100
+        && (!('approvedCount' in data) || (data.approvedCount is int && data.approvedCount >= 0 && data.approvedCount <= data.maxParticipants - 1))
+        && data.maxParticipants >= (data.get('approvedCount', 0) + 1)
+        && (!('lastApprovedRequesterId' in data) || (data.lastApprovedRequesterId is string && data.lastApprovedRequesterId.size() <= 128))
+        && (!('lastRemovedRequesterId' in data) || (data.lastRemovedRequesterId is string && data.lastRemovedRequesterId.size() <= 128))
         && data.privacy in ['public', 'private']
         && data.status in ['active', 'cancelled']
         && data.createdAt is timestamp
@@ -50,12 +55,23 @@ service cloud.firestore {
     }
 
     function isValidJoinRequest(data) {
-      return data.keys().hasOnly(['requesterId', 'requesterDisplayName', 'status', 'createdAt', 'updatedAt'])
+      return data.keys().hasOnly(['requesterId', 'requesterDisplayName', 'status', 'createdAt', 'updatedAt', 'decidedAt', 'decidedBy'])
         && data.requesterId is string
         && data.requesterDisplayName is string && data.requesterDisplayName.size() > 0 && data.requesterDisplayName.size() <= 50
-        && data.status in ['pending', 'withdrawn']
+        && data.status in ['pending', 'withdrawn', 'approved', 'declined', 'left', 'removed']
         && data.createdAt is timestamp
-        && data.updatedAt is timestamp;
+        && data.updatedAt is timestamp
+        && (!('decidedAt' in data) || data.decidedAt is timestamp)
+        && (!('decidedBy' in data) || (data.decidedBy is string && data.decidedBy.size() > 0 && data.decidedBy.size() <= 128));
+    }
+
+    // Collection group read rule for joinRequests:
+    // Enables authenticated requesters to securely query their own requests across scenes
+    match /{path=**}/joinRequests/{requesterUid} {
+      allow read: if isAuthenticated() && (
+        resource.data.requesterId == request.auth.uid
+        || request.auth.uid == requesterUid
+      );
     }
 
     // User profile documents: users/{userId}
@@ -76,38 +92,102 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Collection group read for joinRequests: allows users to query their own requests across scenes
+    match /{path=**}/joinRequests/{requesterUid} {
+      allow read: if isAuthenticated() && request.auth.uid == requesterUid;
+    }
+
     // Scene documents: scenes/{sceneId}
     match /scenes/{sceneId} {
-      // Public active scenes can be read by anyone (including guests).
-      // Hosts can read their own scenes even if private or cancelled.
+      // Read access:
+      // 1. Public active scenes readable by anyone
+      // 2. Hosts can read their own scenes (even private/cancelled)
+      // 3. Approved attendees (including left/removed history) can read the scene even if cancelled
       allow read: if (resource.data.privacy == 'public' && resource.data.status == 'active')
-        || (isAuthenticated() && resource.data.hostId == request.auth.uid);
+        || (isAuthenticated() && (
+          resource.data.hostId == request.auth.uid
+          || (
+            exists(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.auth.uid))
+            && get(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.auth.uid)).data.status in ['approved', 'left', 'removed']
+          )
+        ));
 
-      // Authenticated users with valid profiles can create active scenes.
-      // StartsAt must be in the future, createdAt & updatedAt must be server timestamp.
-      // Host display name must match the authenticated profile.
+      // Create: Authenticated users with valid profiles can create active scenes.
       allow create: if isAuthenticated()
         && request.resource.data.hostId == request.auth.uid
         && request.resource.data.status == 'active'
         && request.resource.data.startsAt > request.time
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time
+        && request.resource.data.get('approvedCount', 0) == 0
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         && request.resource.data.hostDisplayName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.displayName
         && isValidScene(request.resource.data);
 
-      // Only the original host can update their scene. Immutable fields are protected.
-      allow update: if isAuthenticated()
-        && resource.data.hostId == request.auth.uid
-        && request.resource.data.hostId == resource.data.hostId
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.hostDisplayName == resource.data.hostDisplayName
-        && request.resource.data.updatedAt == request.time
-        && isValidScene(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'title', 'description', 'category', 'city', 'area', 'venue',
-          'startsAt', 'budgetPerPerson', 'maxParticipants', 'privacy', 'status', 'updatedAt'
-        ]);
+      // Scene update permissions: Host edits/approvals/removals OR Participant leaving
+      allow update: if isAuthenticated() && (
+        // Branch 1: Host updates their scene
+        (
+          resource.data.hostId == request.auth.uid
+          && request.resource.data.hostId == resource.data.hostId
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.hostDisplayName == resource.data.hostDisplayName
+          && request.resource.data.updatedAt == request.time
+          && isValidScene(request.resource.data)
+          && (
+            // 1A: General metadata edit or cancellation (cannot change approvedCount)
+            (
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'title', 'description', 'category', 'city', 'area', 'venue',
+                'startsAt', 'budgetPerPerson', 'maxParticipants', 'privacy', 'status', 'approvedCount', 'updatedAt'
+              ])
+              && request.resource.data.get('approvedCount', 0) == resource.data.get('approvedCount', 0)
+              && request.resource.data.maxParticipants >= request.resource.data.get('approvedCount', 0) + 1
+            )
+            // 1B: Host approval atomic increment (+1) strictly bound to a pending join request transitioning to approved
+            || (
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['approvedCount', 'lastApprovedRequesterId', 'updatedAt'])
+              && request.resource.data.approvedCount == resource.data.get('approvedCount', 0) + 1
+              && request.resource.data.approvedCount <= request.resource.data.maxParticipants - 1
+              && resource.data.status == 'active'
+              && resource.data.startsAt > request.time
+              && request.resource.data.lastApprovedRequesterId is string
+              && exists(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.resource.data.lastApprovedRequesterId))
+              && get(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.resource.data.lastApprovedRequesterId)).data.status == 'pending'
+              && getAfter(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.resource.data.lastApprovedRequesterId)).data.status == 'approved'
+              && getAfter(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.resource.data.lastApprovedRequesterId)).data.decidedBy == request.auth.uid
+            )
+            // 1C: Host removal of approved participant atomic decrement (-1) strictly bound to an approved request transitioning to removed
+            || (
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly(['approvedCount', 'lastRemovedRequesterId', 'updatedAt'])
+              && request.resource.data.approvedCount == resource.data.get('approvedCount', 0) - 1
+              && request.resource.data.approvedCount >= 0
+              && request.resource.data.lastRemovedRequesterId is string
+              && exists(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.resource.data.lastRemovedRequesterId))
+              && get(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.resource.data.lastRemovedRequesterId)).data.status == 'approved'
+              && getAfter(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.resource.data.lastRemovedRequesterId)).data.status == 'removed'
+              && getAfter(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.resource.data.lastRemovedRequesterId)).data.decidedBy == request.auth.uid
+            )
+          )
+        )
+        // Branch 2: Approved Participant leaves scene, decrementing approvedCount by 1
+        || (
+          resource.data.hostId != request.auth.uid
+          && exists(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.auth.uid))
+          && get(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.auth.uid)).data.status == 'approved'
+          && getAfter(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.auth.uid)).data.status == 'left'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['approvedCount', 'updatedAt'])
+          && request.resource.data.approvedCount == resource.data.get('approvedCount', 0) - 1
+          && request.resource.data.approvedCount >= 0
+          && request.resource.data.hostId == resource.data.hostId
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.hostDisplayName == resource.data.hostDisplayName
+          && request.resource.data.maxParticipants == resource.data.maxParticipants
+          && request.resource.data.title == resource.data.title
+          && isValidScene(request.resource.data)
+          && request.resource.data.updatedAt == request.time
+        )
+      );
 
       // Deletion is strictly forbidden
       allow delete: if false;
@@ -127,6 +207,8 @@ service cloud.firestore {
           && request.resource.data.status == 'pending'
           && request.resource.data.createdAt == request.time
           && request.resource.data.updatedAt == request.time
+          && !('decidedAt' in request.resource.data)
+          && !('decidedBy' in request.resource.data)
           && isValidJoinRequest(request.resource.data)
           && exists(/databases/$(database)/documents/scenes/$(sceneId))
           && get(/databases/$(database)/documents/scenes/$(sceneId)).data.hostId != request.auth.uid
@@ -136,28 +218,98 @@ service cloud.firestore {
           && exists(/databases/$(database)/documents/users/$(request.auth.uid))
           && request.resource.data.requesterDisplayName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.displayName;
 
-        // Update: only requester can toggle between pending and withdrawn
+        // Update: governed by strict state transitions
         allow update: if isAuthenticated()
-          && request.auth.uid == requesterUid
-          && resource.data.requesterId == request.auth.uid
+          && isValidJoinRequest(request.resource.data)
           && request.resource.data.requesterId == resource.data.requesterId
           && request.resource.data.requesterDisplayName == resource.data.requesterDisplayName
           && request.resource.data.createdAt == resource.data.createdAt
           && request.resource.data.updatedAt == request.time
-          && isValidJoinRequest(request.resource.data)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          // Terminal state safeguard: once in a terminal state (declined, left, removed), no further updates allowed
+          && !(resource.data.status in ['declined', 'left', 'removed'])
           && (
-            (resource.data.status == 'pending' && request.resource.data.status == 'withdrawn')
+            // 1: Participant withdraws pending request (pending -> withdrawn)
+            (
+              request.auth.uid == requesterUid
+              && resource.data.status == 'pending'
+              && request.resource.data.status == 'withdrawn'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+            )
+            // 2: Participant re-submits withdrawn request (withdrawn -> pending)
             || (
-              resource.data.status == 'withdrawn'
+              request.auth.uid == requesterUid
+              && resource.data.status == 'withdrawn'
               && request.resource.data.status == 'pending'
-              && exists(/databases/$(database)/documents/scenes/$(sceneId))
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
               && get(/databases/$(database)/documents/scenes/$(sceneId)).data.status == 'active'
               && get(/databases/$(database)/documents/scenes/$(sceneId)).data.startsAt > request.time
+            )
+            // 3: Participant leaves approved scene (approved -> left) with atomic capacity release
+            || (
+              request.auth.uid == requesterUid
+              && resource.data.status == 'approved'
+              && request.resource.data.status == 'left'
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+              && getAfter(/databases/$(database)/documents/scenes/$(sceneId)).data.approvedCount == get(/databases/$(database)/documents/scenes/$(sceneId)).data.get('approvedCount', 0) - 1
+            )
+            // 4: Host approves pending request (pending -> approved) with atomic capacity increment
+            || (
+              request.auth.uid == get(/databases/$(database)/documents/scenes/$(sceneId)).data.hostId
+              && resource.data.status == 'pending'
+              && request.resource.data.status == 'approved'
+              && request.resource.data.decidedBy == request.auth.uid
+              && request.resource.data.decidedAt == request.time
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedAt', 'decidedBy', 'updatedAt'])
+              && get(/databases/$(database)/documents/scenes/$(sceneId)).data.status == 'active'
+              && get(/databases/$(database)/documents/scenes/$(sceneId)).data.startsAt > request.time
+              && getAfter(/databases/$(database)/documents/scenes/$(sceneId)).data.approvedCount == get(/databases/$(database)/documents/scenes/$(sceneId)).data.get('approvedCount', 0) + 1
+              && getAfter(/databases/$(database)/documents/scenes/$(sceneId)).data.approvedCount <= get(/databases/$(database)/documents/scenes/$(sceneId)).data.maxParticipants - 1
+              && getAfter(/databases/$(database)/documents/scenes/$(sceneId)).data.lastApprovedRequesterId == requesterUid
+            )
+            // 5: Host declines pending request (pending -> declined)
+            || (
+              request.auth.uid == get(/databases/$(database)/documents/scenes/$(sceneId)).data.hostId
+              && resource.data.status == 'pending'
+              && request.resource.data.status == 'declined'
+              && request.resource.data.decidedBy == request.auth.uid
+              && request.resource.data.decidedAt == request.time
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedAt', 'decidedBy', 'updatedAt'])
+            )
+            // 6: Host removes approved participant (approved -> removed) with atomic capacity release
+            || (
+              request.auth.uid == get(/databases/$(database)/documents/scenes/$(sceneId)).data.hostId
+              && resource.data.status == 'approved'
+              && request.resource.data.status == 'removed'
+              && request.resource.data.decidedBy == request.auth.uid
+              && request.resource.data.decidedAt == request.time
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedAt', 'decidedBy', 'updatedAt'])
+              && getAfter(/databases/$(database)/documents/scenes/$(sceneId)).data.approvedCount == get(/databases/$(database)/documents/scenes/$(sceneId)).data.get('approvedCount', 0) - 1
+              && getAfter(/databases/$(database)/documents/scenes/$(sceneId)).data.lastRemovedRequesterId == requesterUid
             )
           );
 
         // Delete: strictly forbidden
+        allow delete: if false;
+      }
+
+      // Confidential Venue Details: scenes/{sceneId}/privateDetails/{detailDoc}
+      // Accessible ONLY by the scene host or approved participants
+      match /privateDetails/{detailDoc} {
+        allow read: if isAuthenticated() && (
+          get(/databases/$(database)/documents/scenes/$(sceneId)).data.hostId == request.auth.uid
+          || (
+            exists(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.auth.uid))
+            && get(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.auth.uid)).data.status == 'approved'
+          )
+        );
+
+        allow create, update: if isAuthenticated()
+          && get(/databases/$(database)/documents/scenes/$(sceneId)).data.hostId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['venue', 'hostNotes', 'updatedAt'])
+          && request.resource.data.venue is string && request.resource.data.venue.size() <= 200
+          && (!('hostNotes' in request.resource.data) || (request.resource.data.hostNotes is string && request.resource.data.hostNotes.size() <= 500))
+          && request.resource.data.updatedAt == request.time;
+
         allow delete: if false;
       }
     }
