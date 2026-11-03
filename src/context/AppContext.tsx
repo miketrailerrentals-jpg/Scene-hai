@@ -77,6 +77,7 @@ interface AppContextValue {
   hostJoinRequests: JoinRequest[];
   approvedParticipants: JoinRequest[];
   hostJoinRequestsLoading: boolean;
+  hostJoinRequestsError: string;
   joinRequestLoading: boolean;
   checkMyJoinRequest: (sceneId: string) => Promise<void>;
   submitJoinRequest: (sceneId: string) => Promise<void>;
@@ -86,6 +87,7 @@ interface AppContextValue {
   leaveScene: (sceneId: string) => Promise<boolean>;
   removeParticipant: (sceneId: string, requesterId: string) => Promise<boolean>;
   fetchHostJoinRequests: () => Promise<void>;
+  retryHostJoinRequests: () => void;
 
   loginWithGoogle: (intendedAction?: any) => Promise<void>;
   logout: () => Promise<void>;
@@ -159,11 +161,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [hostJoinRequests, setHostJoinRequests] = useState<JoinRequest[]>([]);
   const [approvedParticipants, setApprovedParticipants] = useState<JoinRequest[]>([]);
   const [hostJoinRequestsLoading, setHostJoinRequestsLoading] = useState<boolean>(false);
+  const [hostJoinRequestsError, setHostJoinRequestsError] = useState<string>('');
   const [joinRequestLoading, setJoinRequestLoading] = useState<boolean>(false);
   const [checkedRequestsSet] = useState<Set<string>>(() => new Set());
 
   // Listeners cleanup tracking
   const activeListenersRef = useRef<Array<() => void>>([]);
+
+  // Host real-time subscriptions tracking
+  const hostSubscriptionsRef = useRef<{
+    unsubScenes?: () => void;
+    requestUnsubs: Map<string, () => void>;
+  }>({ requestUnsubs: new Map() });
+  const sceneRequestsCacheRef = useRef<Map<string, JoinRequest[]>>(new Map());
+
+  // Stable state refs to avoid effect dependency cycles
+  const currentUserRef = useRef(currentUser);
+  currentUserRef.current = currentUser;
+
+  const storeRef = useRef(store);
+  storeRef.current = store;
 
   // Modals
   const [authModal, setAuthModal] = useState<{
@@ -325,6 +342,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const userDocRef = doc(db, 'users', user.uid);
       const snap = await getDoc(userDocRef);
+      const currentStore = storeRef.current;
 
       if (snap.exists()) {
         const cloudData = snap.data();
@@ -332,7 +350,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           uid: user.uid,
           displayName: cloudData.displayName || user.displayName || 'Scene Explorer',
           bio: cloudData.bio || '',
-          city: cloudData.city || store.city || 'Lahore',
+          city: cloudData.city || currentStore.city || 'Lahore',
           area: cloudData.area || '',
           interests: Array.isArray(cloudData.interests)
             ? [...cloudData.interests]
@@ -367,11 +385,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const initialProfile: any = {
             displayName: String(user.displayName || 'Scene Explorer').slice(0, 50).trim(),
             bio: '',
-            city: String(store.city || 'Lahore').slice(0, 50).trim(),
+            city: String(currentStore.city || 'Lahore').slice(0, 50).trim(),
             area: '',
             interests:
-              Array.isArray(store.interests) && store.interests.length
-                ? store.interests.slice(0, 15)
+              Array.isArray(currentStore.interests) && currentStore.interests.length
+                ? currentStore.interests.slice(0, 15)
                 : ['sports', 'food', 'gaming'],
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
@@ -395,7 +413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } finally {
       setProfileLoading(false);
     }
-  }, [store.city, store.interests, updateStore]);
+  }, [updateStore]);
 
   // Firestore Scenes fetch
   const fetchDiscoveryScenes = useCallback(async () => {
@@ -411,8 +429,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       );
       const snap = await getDocs(q);
       const list: Scene[] = [];
+      const currentUid = currentUserRef.current?.uid;
       snap.forEach(docSnap => {
-        list.push(formatFirestoreScene(docSnap.id, docSnap.data(), currentUser?.uid));
+        list.push(formatFirestoreScene(docSnap.id, docSnap.data(), currentUid));
       });
       list.sort((a, b) => dateFor(a).getTime() - dateFor(b).getTime());
       setFirestoreScenes(list);
@@ -422,10 +441,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } finally {
       setScenesLoading(false);
     }
-  }, [currentUser?.uid]);
+  }, []);
 
   const fetchMyHostedScenes = useCallback(async () => {
-    if (!db || !currentUser) {
+    const user = currentUserRef.current;
+    if (!db || !user) {
       setMyHostedScenes([]);
       return;
     }
@@ -433,13 +453,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const q = query(
         collection(db, 'scenes'),
-        where('hostId', '==', currentUser.uid),
+        where('hostId', '==', user.uid),
         limit(50)
       );
       const snap = await getDocs(q);
       const list: Scene[] = [];
       snap.forEach(docSnap => {
-        list.push(formatFirestoreScene(docSnap.id, docSnap.data(), currentUser.uid));
+        list.push(formatFirestoreScene(docSnap.id, docSnap.data(), user.uid));
       });
       list.sort((a, b) => dateFor(a).getTime() - dateFor(b).getTime());
       setMyHostedScenes(list);
@@ -448,15 +468,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } finally {
       setMyHostedLoading(false);
     }
-  }, [currentUser]);
+  }, []);
 
   // User's own join requests across all scenes
   const fetchMyUserRequests = useCallback(async () => {
-    if (!db || !currentUser) return;
+    const user = currentUserRef.current;
+    if (!db || !user) return;
     try {
       const q = query(
         collectionGroup(db, 'joinRequests'),
-        where('requesterId', '==', currentUser.uid)
+        where('requesterId', '==', user.uid)
       );
       const snap = await getDocs(q);
       const requestMap: Record<string, string | null> = {};
@@ -478,7 +499,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const scDoc = await getDoc(doc(db, 'scenes', sId));
           if (scDoc.exists()) {
-            const formatted = formatFirestoreScene(scDoc.id, scDoc.data(), currentUser.uid);
+            const formatted = formatFirestoreScene(scDoc.id, scDoc.data(), user.uid);
             setFirestoreScenes(prev => {
               if (prev.some(s => s.id === sId)) {
                 return prev.map(s => (s.id === sId ? formatted : s));
@@ -493,92 +514,193 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err) {
       console.warn('[Firestore] Error querying user join requests:', err);
     }
-  }, [currentUser]);
+  }, []);
 
-  // Host Join Requests fetch (both pending and approved)
+  // Host Join Requests: real-time listeners for all hosted scenes and their joinRequests
   const fetchHostJoinRequests = useCallback(async () => {
-    if (!db || !currentUser || !myHostedScenes.length) {
+    const user = currentUserRef.current;
+    const firestore = db;
+    if (!firestore || !user) {
       setHostJoinRequests([]);
       setApprovedParticipants([]);
+      setHostJoinRequestsLoading(false);
+      setHostJoinRequestsError('');
       return;
     }
+
     setHostJoinRequestsLoading(true);
-    try {
-      const pendingReqs: JoinRequest[] = [];
-      const approvedReqs: JoinRequest[] = [];
+    setHostJoinRequestsError('');
 
-      for (const sc of myHostedScenes) {
-        if (!sc.isFirestore) continue;
-        const q = collection(db, 'scenes', sc.id, 'joinRequests');
-        const snap = await getDocs(q);
-        snap.forEach(d => {
-          const data = d.data();
-          let ago = 'Recently';
-          if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-            const diffMs = Date.now() - data.createdAt.toDate().getTime();
-            const mins = Math.max(1, Math.floor(diffMs / 60000));
-            if (mins < 60) ago = `${mins}m ago`;
-            else {
-              const hrs = Math.floor(mins / 60);
-              ago = hrs < 24 ? `${hrs}h ago` : `${Math.floor(hrs / 24)}d ago`;
-            }
-          }
-          const item: JoinRequest = {
-            id: d.id,
-            sceneId: sc.id,
-            sceneTitle: sc.title,
-            requesterId: data.requesterId,
-            name: data.requesterDisplayName || 'Scene Explorer',
-            initials: (data.requesterDisplayName || 'SE')
-              .split(' ')
-              .map((x: string) => x[0])
-              .slice(0, 2)
-              .join('')
-              .toUpperCase(),
-            status: data.status,
-            decidedAt: data.decidedAt,
-            decidedBy: data.decidedBy,
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt,
-            ago,
-            isFirestore: true
-          };
+    // Recompute requests helper
+    const recomputeRequests = () => {
+      const allPending: JoinRequest[] = [];
+      const allApproved: JoinRequest[] = [];
 
-          if (data.status === 'pending') {
-            pendingReqs.push(item);
-          } else if (data.status === 'approved') {
-            approvedReqs.push(item);
+      sceneRequestsCacheRef.current.forEach(requests => {
+        requests.forEach(r => {
+          if (r.status === 'pending') {
+            allPending.push(r);
+          } else if (r.status === 'approved') {
+            allApproved.push(r);
           }
         });
-      }
+      });
 
-      pendingReqs.sort((a, b) => {
+      allPending.sort((a, b) => {
         const ta = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
         const tb = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
         return tb - ta;
       });
 
-      approvedReqs.sort((a, b) => {
+      allApproved.sort((a, b) => {
         const ta = a.decidedAt?.toDate ? a.decidedAt.toDate().getTime() : 0;
         const tb = b.decidedAt?.toDate ? b.decidedAt.toDate().getTime() : 0;
         return tb - ta;
       });
 
-      setHostJoinRequests(pendingReqs);
-      setApprovedParticipants(approvedReqs);
-    } catch (err) {
-      console.warn('[Firestore] Error fetching host join requests:', err);
-    } finally {
+      setHostJoinRequests(allPending);
+      setApprovedParticipants(allApproved);
+      setHostJoinRequestsLoading(false);
+      setHostJoinRequestsError('');
+    };
+
+    try {
+      // Clean up previous scenes listener if any
+      if (hostSubscriptionsRef.current.unsubScenes) {
+        hostSubscriptionsRef.current.unsubScenes();
+        hostSubscriptionsRef.current.unsubScenes = undefined;
+      }
+
+      // Scoped query: listen to all scenes owned by current host
+      const hostScenesQuery = query(
+        collection(firestore, 'scenes'),
+        where('hostId', '==', user.uid)
+      );
+
+      const unsubScenes = onSnapshot(
+        hostScenesQuery,
+        scenesSnap => {
+          const currentHostedScenes: Scene[] = [];
+          const currentSceneMap = new Map<string, string>(); // sceneId -> sceneTitle
+
+          scenesSnap.forEach(docSnap => {
+            const sc = formatFirestoreScene(docSnap.id, docSnap.data(), user.uid);
+            currentHostedScenes.push(sc);
+            currentSceneMap.set(docSnap.id, sc.title);
+          });
+
+          currentHostedScenes.sort((a, b) => dateFor(a).getTime() - dateFor(b).getTime());
+          setMyHostedScenes(currentHostedScenes);
+
+          // Clean up subscriptions for scenes that were deleted or no longer hosted
+          hostSubscriptionsRef.current.requestUnsubs.forEach((unsub, scId) => {
+            if (!currentSceneMap.has(scId)) {
+              unsub();
+              hostSubscriptionsRef.current.requestUnsubs.delete(scId);
+              sceneRequestsCacheRef.current.delete(scId);
+            }
+          });
+
+          if (currentSceneMap.size === 0) {
+            setHostJoinRequests([]);
+            setApprovedParticipants([]);
+            setHostJoinRequestsLoading(false);
+            setHostJoinRequestsError('');
+            return;
+          }
+
+          // For each hosted scene, attach real-time onSnapshot to its joinRequests subcollection
+          currentSceneMap.forEach((sceneTitle, sceneId) => {
+            // If already subscribed, update title in cache and recompute
+            if (hostSubscriptionsRef.current.requestUnsubs.has(sceneId)) {
+              const cached = sceneRequestsCacheRef.current.get(sceneId);
+              if (cached) {
+                cached.forEach(r => {
+                  r.sceneTitle = sceneTitle;
+                });
+                recomputeRequests();
+              }
+              return;
+            }
+
+            const reqColl = collection(firestore, 'scenes', sceneId, 'joinRequests');
+            const unsubReqs = onSnapshot(
+              reqColl,
+              reqSnap => {
+                const list: JoinRequest[] = [];
+                reqSnap.forEach(d => {
+                  const data = d.data();
+                  let ago = 'Recently';
+                  if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+                    const diffMs = Date.now() - data.createdAt.toDate().getTime();
+                    const mins = Math.max(1, Math.floor(diffMs / 60000));
+                    if (mins < 60) ago = `${mins}m ago`;
+                    else {
+                      const hrs = Math.floor(mins / 60);
+                      ago = hrs < 24 ? `${hrs}h ago` : `${Math.floor(hrs / 24)}d ago`;
+                    }
+                  }
+                  const item: JoinRequest = {
+                    id: d.id,
+                    sceneId: sceneId,
+                    sceneTitle: sceneTitle,
+                    requesterId: data.requesterId || d.id,
+                    name: data.requesterDisplayName || 'Scene Explorer',
+                    initials: (data.requesterDisplayName || 'SE')
+                      .split(' ')
+                      .map((x: string) => x[0])
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase(),
+                    status: data.status,
+                    decidedAt: data.decidedAt,
+                    decidedBy: data.decidedBy,
+                    createdAt: data.createdAt,
+                    updatedAt: data.updatedAt,
+                    ago,
+                    isFirestore: true
+                  };
+                  list.push(item);
+                });
+
+                sceneRequestsCacheRef.current.set(sceneId, list);
+                recomputeRequests();
+              },
+              err => {
+                console.warn('[Firestore] Error in joinRequests listener for scene ' + sceneId, err);
+                handleFirestoreError(err, 'joinRequestsSnapshot:' + sceneId);
+                setHostJoinRequestsError(err.message || 'Error syncing join requests for your scenes.');
+                setHostJoinRequestsLoading(false);
+              }
+            );
+
+            hostSubscriptionsRef.current.requestUnsubs.set(sceneId, unsubReqs);
+          });
+        },
+        err => {
+          console.warn('[Firestore] Error in host scenes listener:', err);
+          handleFirestoreError(err, 'hostScenesSnapshot');
+          setHostJoinRequestsError(err.message || 'Failed to sync your hosted scenes.');
+          setHostJoinRequestsLoading(false);
+        }
+      );
+
+      hostSubscriptionsRef.current.unsubScenes = unsubScenes;
+    } catch (err: any) {
+      console.warn('[Firestore] Setup host listeners failed:', err);
+      handleFirestoreError(err, 'fetchHostJoinRequests');
+      setHostJoinRequestsError(err.message || 'Failed to establish request listeners.');
       setHostJoinRequestsLoading(false);
     }
-  }, [currentUser, myHostedScenes]);
+  }, []);
 
   // Check single scene join request
   const checkMyJoinRequest = useCallback(async (sceneId: string) => {
-    if (!db || !currentUser || !sceneId || checkedRequestsSet.has(sceneId)) return;
+    const user = currentUserRef.current;
+    if (!db || !user || !sceneId || checkedRequestsSet.has(sceneId)) return;
     checkedRequestsSet.add(sceneId);
     try {
-      const reqRef = doc(db, 'scenes', sceneId, 'joinRequests', currentUser.uid);
+      const reqRef = doc(db, 'scenes', sceneId, 'joinRequests', user.uid);
       const snap = await getDoc(reqRef);
       if (snap.exists()) {
         setMyJoinRequests(prev => ({ ...prev, [sceneId]: snap.data().status }));
@@ -588,12 +710,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (err) {
       console.warn('[Firestore] Error checking join request:', err);
     }
-  }, [currentUser, checkedRequestsSet]);
+  }, [checkedRequestsSet]);
 
   // Real-time synchronization for Scene Detail view
+  const currentUid = currentUser?.uid;
   useEffect(() => {
     if (!db || !currentRoute.startsWith('scene/')) {
-      // Clean up previous listeners
       activeListenersRef.current.forEach(unsub => unsub());
       activeListenersRef.current = [];
       return;
@@ -602,7 +724,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const sceneId = currentRoute.replace('scene/', '');
     if (!sceneId) return;
 
-    // Clean up previous
     activeListenersRef.current.forEach(unsub => unsub());
     activeListenersRef.current = [];
 
@@ -612,7 +733,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sceneDocRef,
       snap => {
         if (snap.exists()) {
-          const formatted = formatFirestoreScene(snap.id, snap.data(), currentUser?.uid);
+          const formatted = formatFirestoreScene(snap.id, snap.data(), currentUid);
           setFirestoreScenes(prev => {
             const idx = prev.findIndex(s => s.id === snap.id);
             if (idx !== -1) {
@@ -640,8 +761,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     activeListenersRef.current.push(unsubScene);
 
     // 2. Listen to user's request status if authenticated
-    if (currentUser) {
-      const reqDocRef = doc(db, 'scenes', sceneId, 'joinRequests', currentUser.uid);
+    if (currentUid) {
+      const reqDocRef = doc(db, 'scenes', sceneId, 'joinRequests', currentUid);
       const unsubReq = onSnapshot(
         reqDocRef,
         snap => {
@@ -662,61 +783,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       activeListenersRef.current.forEach(unsub => unsub());
       activeListenersRef.current = [];
     };
-  }, [currentRoute, currentUser]);
+  }, [currentRoute, currentUid]);
 
-  // Auth observer
+  // 1. Initial discovery fetch on mount
   useEffect(() => {
-    if (auth) {
-      const unsubscribe = onAuthStateChanged(auth, async user => {
-        setAuthReady(true);
-        if (user) {
-          const u = {
-            uid: user.uid,
-            displayName: user.displayName || 'Scene Explorer',
-            email: user.email || '',
-            photoURL: user.photoURL || null
-          };
-          setCurrentUser(u);
-          await loadOrInitFirestoreProfile(user);
-          await fetchDiscoveryScenes();
-          await fetchMyUserRequests();
-        } else {
-          setCurrentUser(null);
-          setActiveProfile(null);
-          setMyHostedScenes([]);
-          setMyJoinRequests({});
-          setHostJoinRequests([]);
-          setApprovedParticipants([]);
-          checkedRequestsSet.clear();
-          await fetchDiscoveryScenes();
-        }
-      });
-      return () => unsubscribe();
-    } else {
+    fetchDiscoveryScenes();
+  }, [fetchDiscoveryScenes]);
+
+  // 2. Auth observer: registered ONCE on mount
+  useEffect(() => {
+    if (!auth) {
       setAuthReady(true);
-      fetchDiscoveryScenes();
+      return;
     }
-  }, [loadOrInitFirestoreProfile, fetchDiscoveryScenes, fetchMyUserRequests, checkedRequestsSet]);
+    const unsubscribe = onAuthStateChanged(auth, user => {
+      setAuthReady(true);
+      if (user) {
+        setCurrentUser({
+          uid: user.uid,
+          displayName: user.displayName || 'Scene Explorer',
+          email: user.email || '',
+          photoURL: user.photoURL || null
+        });
+      } else {
+        setCurrentUser(null);
+        setActiveProfile(null);
+        setMyHostedScenes([]);
+        setMyJoinRequests({});
+        setHostJoinRequests([]);
+        setApprovedParticipants([]);
+        setHostJoinRequestsError('');
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
+  // 3. User data sync & real-time host subscriptions: runs when currentUser?.uid changes
   useEffect(() => {
-    if (currentUser) {
-      fetchMyHostedScenes();
-    }
-  }, [currentUser, fetchMyHostedScenes]);
-
-  useEffect(() => {
-    if (currentUser && myHostedScenes.length) {
+    if (currentUid && auth?.currentUser) {
+      loadOrInitFirestoreProfile(auth.currentUser);
+      fetchMyUserRequests();
       fetchHostJoinRequests();
+    } else {
+      if (hostSubscriptionsRef.current.unsubScenes) {
+        hostSubscriptionsRef.current.unsubScenes();
+        hostSubscriptionsRef.current.unsubScenes = undefined;
+      }
+      hostSubscriptionsRef.current.requestUnsubs.forEach(unsub => unsub());
+      hostSubscriptionsRef.current.requestUnsubs.clear();
+      sceneRequestsCacheRef.current.clear();
+      setHostJoinRequests([]);
+      setApprovedParticipants([]);
+      setHostJoinRequestsLoading(false);
+      setHostJoinRequestsError('');
     }
-  }, [currentUser, myHostedScenes, fetchHostJoinRequests]);
 
+    return () => {
+      if (hostSubscriptionsRef.current.unsubScenes) {
+        hostSubscriptionsRef.current.unsubScenes();
+        hostSubscriptionsRef.current.unsubScenes = undefined;
+      }
+      hostSubscriptionsRef.current.requestUnsubs.forEach(unsub => unsub());
+      hostSubscriptionsRef.current.requestUnsubs.clear();
+      sceneRequestsCacheRef.current.clear();
+    };
+  }, [currentUid, loadOrInitFirestoreProfile, fetchMyUserRequests, fetchHostJoinRequests]);
+
+  // 4. Refresh data when navigating to my-scenes
   useEffect(() => {
-    if (currentRoute === 'my-scenes' && currentUser) {
-      fetchMyHostedScenes();
+    if (currentRoute === 'my-scenes' && currentUid) {
       fetchMyUserRequests();
       fetchHostJoinRequests();
     }
-  }, [currentRoute, currentUser, fetchMyHostedScenes, fetchMyUserRequests, fetchHostJoinRequests]);
+  }, [currentRoute, currentUid, fetchMyUserRequests, fetchHostJoinRequests]);
 
   // Open & Close Auth Modal
   const openAuthPrompt = useCallback(
@@ -819,6 +958,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       activeListenersRef.current.forEach(unsub => unsub());
       activeListenersRef.current = [];
+      if (hostSubscriptionsRef.current.unsubScenes) {
+        hostSubscriptionsRef.current.unsubScenes();
+        hostSubscriptionsRef.current.unsubScenes = undefined;
+      }
+      hostSubscriptionsRef.current.requestUnsubs.forEach(unsub => unsub());
+      hostSubscriptionsRef.current.requestUnsubs.clear();
+      sceneRequestsCacheRef.current.clear();
       await signOut(auth);
       setCurrentUser(null);
       setActiveProfile(null);
@@ -829,6 +975,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setMyJoinRequests({});
       setHostJoinRequests([]);
       setApprovedParticipants([]);
+      setHostJoinRequestsLoading(false);
+      setHostJoinRequestsError('');
       updateStore(s => ({ ...s, name: 'Areeb Khan' }));
       showToast('Signed out. You are now browsing as a guest.');
     } catch (err) {
@@ -994,12 +1142,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const userDocRef = doc(db, 'users', currentUser.uid);
           const userSnap = await getDoc(userDocRef);
           let displayName = getActiveDisplayName() || currentUser.displayName || 'Scene Explorer';
+          let finalDisplayName = displayName;
+
           if (userSnap.exists() && userSnap.data().displayName) {
-            displayName = userSnap.data().displayName;
+            finalDisplayName = userSnap.data().displayName;
+          } else if (!userSnap.exists()) {
+            const initialProf: any = {
+              displayName: String(displayName).slice(0, 50).trim(),
+              bio: '',
+              city: String(store.city || 'Lahore').slice(0, 50).trim(),
+              area: '',
+              interests:
+                Array.isArray(store.interests) && store.interests.length
+                  ? store.interests.slice(0, 15)
+                  : ['sports', 'food', 'gaming'],
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            };
+            await setDoc(userDocRef, initialProf);
+            finalDisplayName = initialProf.displayName;
+            const prof: UserProfile = { ...initialProf, uid: currentUser.uid };
+            saveUserProfile(currentUser.uid, prof);
+            setActiveProfile(prof);
           }
+
           await setDoc(reqRef, {
             requesterId: currentUser.uid,
-            requesterDisplayName: displayName,
+            requesterDisplayName: finalDisplayName,
             status: 'pending',
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
@@ -1783,6 +1952,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     hostJoinRequests,
     approvedParticipants,
     hostJoinRequestsLoading,
+    hostJoinRequestsError,
     joinRequestLoading,
     checkMyJoinRequest,
     submitJoinRequest,
@@ -1792,6 +1962,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     leaveScene,
     removeParticipant,
     fetchHostJoinRequests,
+    retryHostJoinRequests: fetchHostJoinRequests,
 
     loginWithGoogle,
     logout,

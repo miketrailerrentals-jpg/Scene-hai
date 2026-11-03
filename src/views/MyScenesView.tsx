@@ -14,6 +14,8 @@ export const MyScenesView: React.FC = () => {
     hostJoinRequests,
     approvedParticipants,
     hostJoinRequestsLoading,
+    hostJoinRequestsError,
+    retryHostJoinRequests,
     joinRequestLoading,
     myHostedLoading,
     approveJoinRequest,
@@ -331,6 +333,50 @@ export const MyScenesView: React.FC = () => {
                 Sign in with Google <Icon name="arrow" size={16} />
               </button>
             </div>
+          ) : hostJoinRequestsError ? (
+            <div
+              style={{
+                background: '#fff2f0',
+                border: '1.5px solid #ffccc7',
+                borderRadius: 16,
+                padding: '20px 24px',
+                marginBottom: 20
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 16,
+                  flexWrap: 'wrap'
+                }}
+              >
+                <div>
+                  <strong
+                    style={{
+                      display: 'block',
+                      fontSize: 14,
+                      color: '#cf1322',
+                      marginBottom: 4
+                    }}
+                  >
+                    Unable to load requests
+                  </strong>
+                  <span style={{ fontSize: 12, color: '#820014' }}>
+                    {hostJoinRequestsError}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={retryHostJoinRequests}
+                  style={{ width: 'auto', padding: '8px 16px', margin: 0, fontSize: 13 }}
+                >
+                  Retry
+                </button>
+              </div>
+            </div>
           ) : hostJoinRequestsLoading ? (
             <div
               style={{
@@ -345,9 +391,38 @@ export const MyScenesView: React.FC = () => {
             <div style={{ display: 'grid', gap: '28px' }}>
               {/* 1. Pending Requests Section */}
               <div>
-                <h2 className="requests-title">
-                  Waiting for your okay ({hostJoinRequests.length})
-                </h2>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <h2 className="requests-title" style={{ margin: 0 }}>
+                    Waiting for your okay ({hostJoinRequests.length})
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={retryHostJoinRequests}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#49455a',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 8px',
+                      borderRadius: '8px'
+                    }}
+                    title="Refresh join requests"
+                  >
+                    ↻ Sync live
+                  </button>
+                </div>
                 <p
                   style={{
                     fontSize: '12px',
@@ -361,9 +436,11 @@ export const MyScenesView: React.FC = () => {
                 {hostJoinRequests.length ? (
                   <div style={{ display: 'grid', gap: '12px' }}>
                     {hostJoinRequests.map(q => {
-                      const targetScene = allScenes.find(s => s.id === q.sceneId);
-                      const spotsLeft = targetScene ? remain(targetScene) : 0;
-                      const isFull = spotsLeft <= 0;
+                      const targetScene =
+                        allScenes.find(s => s.id === q.sceneId) ||
+                        myHostedScenes.find(s => s.id === q.sceneId);
+                      const spotsLeft = targetScene ? remain(targetScene) : 1;
+                      const isFull = targetScene ? remain(targetScene) <= 0 : false;
 
                       return (
                         <div key={q.id} className="request-card">

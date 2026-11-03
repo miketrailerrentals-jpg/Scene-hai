@@ -312,6 +312,44 @@ service cloud.firestore {
 
         allow delete: if false;
       }
+
+      // Real-Time Group Chat Messages: scenes/{sceneId}/messages/{messageId}
+      // Authorized exclusively for scene host or currently approved participants
+      match /messages/{messageId} {
+        // Read: Authenticated host or currently approved participant
+        // For cancelled scenes, existing authorized members can still view message history
+        allow read: if isAuthenticated() && (
+          get(/databases/$(database)/documents/scenes/$(sceneId)).data.hostId == request.auth.uid
+          || (
+            exists(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.auth.uid))
+            && get(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.auth.uid)).data.status == 'approved'
+          )
+        );
+
+        // Create: Authenticated host or currently approved participant
+        // Parent scene must be active (cancelled scenes reject new messages)
+        allow create: if isAuthenticated()
+          && (
+            get(/databases/$(database)/documents/scenes/$(sceneId)).data.hostId == request.auth.uid
+            || (
+              exists(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.auth.uid))
+              && get(/databases/$(database)/documents/scenes/$(sceneId)/joinRequests/$(request.auth.uid)).data.status == 'approved'
+            )
+          )
+          && get(/databases/$(database)/documents/scenes/$(sceneId)).data.status == 'active'
+          && request.resource.data.keys().hasOnly(['senderId', 'senderDisplayName', 'text', 'createdAt'])
+          && request.resource.data.senderId == request.auth.uid
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && request.resource.data.senderDisplayName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.displayName
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1
+          && request.resource.data.text.size() <= 1000
+          && request.resource.data.text.matches('.*\\S.*')
+          && request.resource.data.createdAt == request.time;
+
+        // Message updates and deletions are strictly forbidden
+        allow update, delete: if false;
+      }
     }
   }
 }

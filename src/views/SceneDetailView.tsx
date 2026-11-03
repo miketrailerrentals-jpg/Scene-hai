@@ -25,43 +25,24 @@ export const SceneDetailView: React.FC<{ sceneId: string }> = ({ sceneId }) => {
     showToast
   } = useApp();
 
+  const [privateVenue, setPrivateVenue] = useState<string | null>(null);
+
   const scene = allScenes.find(s => s.id === sceneId);
+
+  const reqStatus = scene?.isFirestore && currentUser ? myJoinRequests[scene.id] : null;
+  const isPending =
+    (scene?.isFirestore && currentUser && reqStatus === 'pending') ||
+    (!scene?.isFirestore && !!scene && store.requested.includes(scene.id));
+  const isJoined =
+    (!!scene && store.joined.includes(scene.id)) ||
+    Boolean(scene?.isFirestore && currentUser && reqStatus === 'approved');
+  const isHosting = !!scene?.isMine;
 
   useEffect(() => {
     if (scene?.isFirestore && currentUser && !scene.isMine) {
       checkMyJoinRequest(sceneId);
     }
-  }, [scene, currentUser, sceneId, checkMyJoinRequest]);
-
-  if (!scene) {
-    return (
-      <div className="view empty-state">
-        <h1>Scene not found</h1>
-        <p>It might have been removed.</p>
-        <button
-          type="button"
-          className="button dark"
-          onClick={() => navigate('discover')}
-        >
-          Back home <Icon name="arrow" size={17} />
-        </button>
-      </div>
-    );
-  }
-
-  const reqStatus = scene.isFirestore && currentUser ? myJoinRequests[scene.id] : null;
-  const isPending =
-    (scene.isFirestore && currentUser && reqStatus === 'pending') ||
-    (!scene.isFirestore && store.requested.includes(scene.id));
-  const isJoined =
-    store.joined.includes(scene.id) ||
-    (Boolean(scene.isFirestore && currentUser && reqStatus === 'approved'));
-  const isHosting = !!scene.isMine;
-  const isCancelled = scene.status === 'cancelled';
-  const hasEnded = dateFor(scene).getTime() <= Date.now();
-  const spotsLeft = remain(scene);
-
-  const [privateVenue, setPrivateVenue] = useState<string | null>(null);
+  }, [scene?.isFirestore, scene?.isMine, currentUser, sceneId, checkMyJoinRequest]);
 
   useEffect(() => {
     let isMounted = true;
@@ -83,6 +64,26 @@ export const SceneDetailView: React.FC<{ sceneId: string }> = ({ sceneId }) => {
       isMounted = false;
     };
   }, [scene?.id, scene?.isFirestore, isHosting, isJoined]);
+
+  if (!scene) {
+    return (
+      <div className="view empty-state">
+        <h1>Scene not found</h1>
+        <p>It might have been removed.</p>
+        <button
+          type="button"
+          className="button dark"
+          onClick={() => navigate('discover')}
+        >
+          Back home <Icon name="arrow" size={17} />
+        </button>
+      </div>
+    );
+  }
+
+  const isCancelled = scene.status === 'cancelled';
+  const hasEnded = dateFor(scene).getTime() <= Date.now();
+  const spotsLeft = remain(scene);
 
   const catObj = categories.find(c => c.id === scene.category);
 

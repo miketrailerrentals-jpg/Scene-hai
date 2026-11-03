@@ -1,4 +1,4 @@
-Nov 03, 2026 2:18:02 PM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
+Nov 03, 2026 3:09:54 PM com.google.cloud.datastore.emulator.firestore.websocket.WebSocketServer start
 INFO: Started WebSocket server on ws://127.0.0.1:9150
 
 API endpoint: http://127.0.0.1:8080
@@ -16,27 +16,27 @@ If you are running a Firestore in Datastore Mode project, run:
 Note: Support for Datastore Mode is in preview. If you encounter any bugs please file at https://github.com/firebase/firebase-tools/issues.
 Dev App Server is now running.
 
-Nov 03, 2026 2:18:02 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Nov 03, 2026 3:09:54 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected non-HTTP/2 connection.
-Nov 03, 2026 2:18:02 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Nov 03, 2026 3:09:54 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:04 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Nov 03, 2026 3:09:55 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected non-HTTP/2 connection.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:04 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Nov 03, 2026 3:09:55 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:04 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
+Nov 03, 2026 3:09:56 PM io.gapi.emulators.netty.HttpVersionRoutingHandler channelRead
 INFO: Detected HTTP/2 connection.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:04 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:56 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L6, false for 'update' @ L128
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -69,7 +69,7 @@ false for 'update' @ L6, false for 'update' @ L128
 
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:04 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:56 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L6, false for 'create' @ L204, false for 'update' @ L6, false for 'update' @ L222
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -110,7 +110,7 @@ Multiple projectIds are not recommended in single project mode. Requested projec
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:04 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:56 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L6, false for 'update' @ L86
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -149,7 +149,7 @@ Multiple projectIds are not recommended in single project mode. Requested projec
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:04 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:56 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L6, evaluation error at L204:26 for 'create' @ L204, false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'create' @ L6, false for 'create' @ L204
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -180,7 +180,7 @@ false for 'create' @ L6, evaluation error at L204:26 for 'create' @ L204, false 
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Nov 03, 2026 2:18:04 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:56 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'create' @ L6, false for 'create' @ L204, false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'create' @ L6, false for 'create' @ L204
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -231,7 +231,7 @@ Multiple projectIds are not recommended in single project mode. Requested projec
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:05 PM com.google.firebase.rules.runtime.impl.CompositeListener tryInvoke
+Nov 03, 2026 3:09:57 PM com.google.firebase.rules.runtime.impl.CompositeListener tryInvoke
 WARNING: [CONTEXT ratelimit_period="1 MINUTES" ]
 java.lang.ArrayIndexOutOfBoundsException: Index 0 out of bounds for length 0
 	at com.google.common.collect.RegularImmutableList.get(RegularImmutableList.java:81)
@@ -293,7 +293,7 @@ java.lang.ArrayIndexOutOfBoundsException: Index 0 out of bounds for length 0
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
-Nov 03, 2026 2:18:05 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:57 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -329,7 +329,7 @@ false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false 
 
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:05 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:57 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, Property lastApprovedRequesterId is undefined on object. for 'update' @ L128
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -394,7 +394,7 @@ Caused by: com.google.firebase.rules.runtime.common.EvaluationException: Error: 
 
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:05 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:57 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, false for 'update' @ L222
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -429,7 +429,7 @@ Multiple projectIds are not recommended in single project mode. Requested projec
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:05 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:57 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -471,7 +471,7 @@ Multiple projectIds are not recommended in single project mode. Requested projec
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:05 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:57 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, false for 'update' @ L222
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -504,7 +504,7 @@ false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false 
 
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:05 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:57 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, false for 'update' @ L222
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -543,7 +543,7 @@ Multiple projectIds are not recommended in single project mode. Requested projec
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:05 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:57 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -581,49 +581,7 @@ Multiple projectIds are not recommended in single project mode. Requested projec
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:05 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
-WARNING: Operation failed: 
-false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
-com.google.cloud.datastore.core.exception.DatastoreException: 
-false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
-	at com.google.cloud.datastore.core.exception.DatastoreException$Builder.build(DatastoreException.java:152)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.verboseError(DefaultEmulatorRulesAuthorizer.java:349)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:326)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.checkCommit(DefaultEmulatorRulesAuthorizer.java:113)
-	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.commitHelper(FirestoreEmulatorHelper.java:407)
-	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.internalCommit(FirestoreEmulatorHelper.java:348)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.commit(CloudFirestoreV1.java:541)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1Router.commit(CloudFirestoreV1Router.java:177)
-	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter$1.lambda$commit$0(FirestoreV1GrpcAdapter.java:162)
-	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter.unary(FirestoreV1GrpcAdapter.java:72)
-	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter$1.commit(FirestoreV1GrpcAdapter.java:162)
-	at com.google.firestore.v1.FirestoreGrpc$MethodHandlers.invoke(FirestoreGrpc.java:1404)
-	at io.grpc.stub.ServerCalls$UnaryServerCallHandler$UnaryServerCallListener.onHalfClose(ServerCalls.java:182)
-	at io.grpc.PartialForwardingServerCallListener.onHalfClose(PartialForwardingServerCallListener.java:35)
-	at io.grpc.ForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:23)
-	at io.grpc.ForwardingServerCallListener$SimpleForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:40)
-	at io.grpc.Contexts$ContextualizedServerCallListener.onHalfClose(Contexts.java:86)
-	at io.grpc.PartialForwardingServerCallListener.onHalfClose(PartialForwardingServerCallListener.java:35)
-	at io.grpc.ForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:23)
-	at io.grpc.ForwardingServerCallListener$SimpleForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:40)
-	at io.grpc.Contexts$ContextualizedServerCallListener.onHalfClose(Contexts.java:86)
-	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.halfClosed(ServerCallImpl.java:356)
-	at io.grpc.internal.ServerImpl$JumpToApplicationThreadServerStreamListener$1HalfClosed.runInContext(ServerImpl.java:879)
-	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37)
-	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-	at java.base/java.lang.Thread.run(Thread.java:1583)
-
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:05 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:57 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -665,65 +623,7 @@ Multiple projectIds are not recommended in single project mode. Requested projec
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:06 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
-WARNING: Operation failed: 
-false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
-com.google.cloud.datastore.core.exception.DatastoreException: 
-false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
-	at com.google.cloud.datastore.core.exception.DatastoreException$Builder.build(DatastoreException.java:152)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.verboseError(DefaultEmulatorRulesAuthorizer.java:349)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:326)
-	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.checkCommit(DefaultEmulatorRulesAuthorizer.java:113)
-	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.commitHelper(FirestoreEmulatorHelper.java:407)
-	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.internalCommit(FirestoreEmulatorHelper.java:348)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.commit(CloudFirestoreV1.java:541)
-	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1Router.commit(CloudFirestoreV1Router.java:177)
-	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter$1.lambda$commit$0(FirestoreV1GrpcAdapter.java:162)
-	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter.unary(FirestoreV1GrpcAdapter.java:72)
-	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter$1.commit(FirestoreV1GrpcAdapter.java:162)
-	at com.google.firestore.v1.FirestoreGrpc$MethodHandlers.invoke(FirestoreGrpc.java:1404)
-	at io.grpc.stub.ServerCalls$UnaryServerCallHandler$UnaryServerCallListener.onHalfClose(ServerCalls.java:182)
-	at io.grpc.PartialForwardingServerCallListener.onHalfClose(PartialForwardingServerCallListener.java:35)
-	at io.grpc.ForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:23)
-	at io.grpc.ForwardingServerCallListener$SimpleForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:40)
-	at io.grpc.Contexts$ContextualizedServerCallListener.onHalfClose(Contexts.java:86)
-	at io.grpc.PartialForwardingServerCallListener.onHalfClose(PartialForwardingServerCallListener.java:35)
-	at io.grpc.ForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:23)
-	at io.grpc.ForwardingServerCallListener$SimpleForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:40)
-	at io.grpc.Contexts$ContextualizedServerCallListener.onHalfClose(Contexts.java:86)
-	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.halfClosed(ServerCallImpl.java:356)
-	at io.grpc.internal.ServerImpl$JumpToApplicationThreadServerStreamListener$1HalfClosed.runInContext(ServerImpl.java:879)
-	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37)
-	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-	at java.base/java.lang.Thread.run(Thread.java:1583)
-
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:06 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Nov 03, 2026 3:09:57 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
 false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
 com.google.cloud.datastore.core.exception.DatastoreException: 
@@ -771,11 +671,21 @@ Multiple projectIds are not recommended in single project mode. Requested projec
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
-Nov 03, 2026 2:18:06 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Nov 03, 2026 3:09:57 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
 WARNING: Operation failed: 
-false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L222
+false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
 com.google.cloud.datastore.core.exception.DatastoreException: 
-false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L222
+false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
 	at com.google.cloud.datastore.core.exception.DatastoreException$Builder.build(DatastoreException.java:152)
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.verboseError(DefaultEmulatorRulesAuthorizer.java:349)
 	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:326)
@@ -805,6 +715,116 @@ false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false 
 	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
 	at java.base/java.lang.Thread.run(Thread.java:1583)
 
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Nov 03, 2026 3:09:58 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+WARNING: Operation failed: 
+false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
+com.google.cloud.datastore.core.exception.DatastoreException: 
+false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
+	at com.google.cloud.datastore.core.exception.DatastoreException$Builder.build(DatastoreException.java:152)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.verboseError(DefaultEmulatorRulesAuthorizer.java:349)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:326)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.checkCommit(DefaultEmulatorRulesAuthorizer.java:113)
+	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.commitHelper(FirestoreEmulatorHelper.java:407)
+	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.internalCommit(FirestoreEmulatorHelper.java:348)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.commit(CloudFirestoreV1.java:541)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1Router.commit(CloudFirestoreV1Router.java:177)
+	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter$1.lambda$commit$0(FirestoreV1GrpcAdapter.java:162)
+	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter.unary(FirestoreV1GrpcAdapter.java:72)
+	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter$1.commit(FirestoreV1GrpcAdapter.java:162)
+	at com.google.firestore.v1.FirestoreGrpc$MethodHandlers.invoke(FirestoreGrpc.java:1404)
+	at io.grpc.stub.ServerCalls$UnaryServerCallHandler$UnaryServerCallListener.onHalfClose(ServerCalls.java:182)
+	at io.grpc.PartialForwardingServerCallListener.onHalfClose(PartialForwardingServerCallListener.java:35)
+	at io.grpc.ForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:23)
+	at io.grpc.ForwardingServerCallListener$SimpleForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:40)
+	at io.grpc.Contexts$ContextualizedServerCallListener.onHalfClose(Contexts.java:86)
+	at io.grpc.PartialForwardingServerCallListener.onHalfClose(PartialForwardingServerCallListener.java:35)
+	at io.grpc.ForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:23)
+	at io.grpc.ForwardingServerCallListener$SimpleForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:40)
+	at io.grpc.Contexts$ContextualizedServerCallListener.onHalfClose(Contexts.java:86)
+	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.halfClosed(ServerCallImpl.java:356)
+	at io.grpc.internal.ServerImpl$JumpToApplicationThreadServerStreamListener$1HalfClosed.runInContext(ServerImpl.java:879)
+	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37)
+	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Nov 03, 2026 3:09:58 PM com.google.cloud.datastore.emulator.impl.util.WrappedStreamObserver onError
+WARNING: Operation failed: 
+false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
+com.google.cloud.datastore.core.exception.DatastoreException: 
+false for 'update' @ L6, evaluation error at L222:26 for 'update' @ L222, false for 'update' @ L6, Unable to evaluate the expression as the maximum of 1000 expressions to evaluate has been reached. for 'update' @ L128, false for 'update' @ L6, false for 'update' @ L128
+	at com.google.cloud.datastore.core.exception.DatastoreException$Builder.build(DatastoreException.java:152)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.verboseError(DefaultEmulatorRulesAuthorizer.java:349)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.withVerboseErrors(DefaultEmulatorRulesAuthorizer.java:326)
+	at com.google.cloud.datastore.emulator.impl.rules.DefaultEmulatorRulesAuthorizer.checkCommit(DefaultEmulatorRulesAuthorizer.java:113)
+	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.commitHelper(FirestoreEmulatorHelper.java:407)
+	at com.google.cloud.datastore.emulator.impl.firestore.FirestoreEmulatorHelper.internalCommit(FirestoreEmulatorHelper.java:348)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1.commit(CloudFirestoreV1.java:541)
+	at com.google.cloud.datastore.emulator.impl.firestore.CloudFirestoreV1Router.commit(CloudFirestoreV1Router.java:177)
+	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter$1.lambda$commit$0(FirestoreV1GrpcAdapter.java:162)
+	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter.unary(FirestoreV1GrpcAdapter.java:72)
+	at com.google.cloud.datastore.emulator.firestore.v1.FirestoreV1GrpcAdapter$1.commit(FirestoreV1GrpcAdapter.java:162)
+	at com.google.firestore.v1.FirestoreGrpc$MethodHandlers.invoke(FirestoreGrpc.java:1404)
+	at io.grpc.stub.ServerCalls$UnaryServerCallHandler$UnaryServerCallListener.onHalfClose(ServerCalls.java:182)
+	at io.grpc.PartialForwardingServerCallListener.onHalfClose(PartialForwardingServerCallListener.java:35)
+	at io.grpc.ForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:23)
+	at io.grpc.ForwardingServerCallListener$SimpleForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:40)
+	at io.grpc.Contexts$ContextualizedServerCallListener.onHalfClose(Contexts.java:86)
+	at io.grpc.PartialForwardingServerCallListener.onHalfClose(PartialForwardingServerCallListener.java:35)
+	at io.grpc.ForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:23)
+	at io.grpc.ForwardingServerCallListener$SimpleForwardingServerCallListener.onHalfClose(ForwardingServerCallListener.java:40)
+	at io.grpc.Contexts$ContextualizedServerCallListener.onHalfClose(Contexts.java:86)
+	at io.grpc.internal.ServerCallImpl$ServerStreamListenerImpl.halfClosed(ServerCallImpl.java:356)
+	at io.grpc.internal.ServerImpl$JumpToApplicationThreadServerStreamListener$1HalfClosed.runInContext(ServerImpl.java:879)
+	at io.grpc.internal.ContextRunnable.run(ContextRunnable.java:37)
+	at io.grpc.internal.SerializingExecutor.run(SerializingExecutor.java:133)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
+Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 Multiple projectIds are not recommended in single project mode. Requested project ID gen-lang-client-0648193037, but the emulator is configured for demo-no-project. To opt-out of single project mode add/set the '"singleProjectMode": false' property in the firebase.json emulators config.
 *** shutting down gRPC server since JVM is shutting down

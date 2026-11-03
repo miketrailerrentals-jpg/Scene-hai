@@ -7,6 +7,10 @@ import {
 import {
   doc,
   getDoc,
+  getDocs,
+  collection,
+  query,
+  where,
   setDoc,
   updateDoc,
   runTransaction,
@@ -211,8 +215,14 @@ describe('Scene Hai? Firestore Security Rules Verification Suite', () => {
     // Host can read request on their scene -> succeeds
     await assertSucceeds(getDoc(doc(hostDb, 'scenes', sceneId, 'joinRequests', attendeeUid)));
 
+    // Host can LIST requests on their scene -> does this succeed?
+    await assertSucceeds(getDocs(collection(hostDb, 'scenes', sceneId, 'joinRequests')));
+
     // Stranger cannot read requester join request -> fails
     await assertFails(getDoc(doc(strangerDb, 'scenes', sceneId, 'joinRequests', attendeeUid)));
+
+    // Stranger cannot LIST requests on another user's scene -> fails
+    await assertFails(getDocs(collection(strangerDb, 'scenes', sceneId, 'joinRequests')));
   });
 
   test('5. Atomic Host Approval: requires synchronous request update + scene counter increment', async () => {
@@ -660,6 +670,150 @@ describe('Scene Hai? Firestore Security Rules Verification Suite', () => {
     // Verify scene document state
     const finalSceneSnap = await getDoc(doc(hostDb, 'scenes', sceneId));
     assert.strictEqual(finalSceneSnap.data()?.approvedCount, 1, 'Final approvedCount must be exactly 1');
+  });
+
+  test('13. Mandatory End-to-End Workflow: Account A (Host) and Account B (Participant)', async () => {
+    // 0. Setup profiles for Account A (Host) and Account B (Participant)
+    const hostDb = testEnv.authenticatedContext(hostUid).firestore();
+    const participantDb = testEnv.authenticatedContext(attendeeUid).firestore();
+    const e2eSceneId = 'e2e-futsal-lahore';
+    const futureDate = new Date(Date.now() + 86400000 * 3);
+
+    await testEnv.withSecurityRulesDisabled(async context => {
+      const db = context.firestore();
+      await setDoc(doc(db, 'users', hostUid), {
+        displayName: 'Ahmad Host',
+        city: 'Lahore',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+      await setDoc(doc(db, 'users', attendeeUid), {
+        displayName: 'Bilal Guest',
+        city: 'Lahore',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+    });
+
+    // Step 1: User A creates a scene with 3 total seats (Host + 2 guest spots)
+    await assertSucceeds(
+      setDoc(doc(hostDb, 'scenes', e2eSceneId), {
+        hostId: hostUid,
+        hostDisplayName: 'Ahmad Host',
+        title: 'Friday Evening Futsal Match',
+        description: 'Friendly 5v5 futsal meetup at Model Town sports arena.',
+        category: 'sports',
+        city: 'Lahore',
+        area: 'Model Town',
+        venue: 'Meetup spot shared after approval',
+        startsAt: Timestamp.fromDate(futureDate),
+        timezone: 'Asia/Karachi',
+        budgetPerPerson: 400,
+        maxParticipants: 3,
+        approvedCount: 0,
+        privacy: 'public',
+        status: 'active',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      })
+    );
+
+    // Step 2: User B discovers the exact scene
+    const discoveredSceneSnap = await getDoc(doc(participantDb, 'scenes', e2eSceneId));
+    assert.strictEqual(discoveredSceneSnap.exists(), true, 'Participant B can discover public scene');
+    assert.strictEqual(discoveredSceneSnap.data()?.title, 'Friday Evening Futsal Match');
+    assert.strictEqual(discoveredSceneSnap.data()?.approvedCount, 0);
+
+    // Step 3: User B submits a join request
+    await assertSucceeds(
+      setDoc(doc(participantDb, 'scenes', e2eSceneId, 'joinRequests', attendeeUid), {
+        requesterId: attendeeUid,
+        requesterDisplayName: 'Bilal Guest',
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      })
+    );
+
+    // Step 4: Verify the pending document exists in Firestore
+    const pendingReqSnap = await getDoc(doc(participantDb, 'scenes', e2eSceneId, 'joinRequests', attendeeUid));
+    assert.strictEqual(pendingReqSnap.exists(), true);
+    assert.strictEqual(pendingReqSnap.data()?.status, 'pending');
+    assert.strictEqual(pendingReqSnap.data()?.requesterDisplayName, 'Bilal Guest');
+
+    // Step 5: User A opens My Scenes -> Requests: queries hosted scenes and reads subcollection
+    const hostScenesSnap = await getDocs(
+      query(collection(hostDb, 'scenes'), where('hostId', '==', hostUid))
+    );
+    assert.strictEqual(hostScenesSnap.size, 1, 'Host sees exactly their 1 hosted scene');
+
+    const hostSceneDoc = hostScenesSnap.docs[0];
+    const hostRequestsSnap = await getDocs(
+      collection(hostDb, 'scenes', hostSceneDoc.id, 'joinRequests')
+    );
+
+    // Step 6: Verify B's request is visible to A with the correct scene title
+    assert.strictEqual(hostRequestsSnap.size, 1, 'Host sees 1 pending join request');
+    const reqDoc = hostRequestsSnap.docs[0];
+    assert.strictEqual(reqDoc.id, attendeeUid);
+    assert.strictEqual(reqDoc.data().requesterId, attendeeUid);
+    assert.strictEqual(reqDoc.data().status, 'pending');
+    assert.strictEqual(hostSceneDoc.data().title, 'Friday Evening Futsal Match');
+
+    // Step 7: User A approves User B via atomic transaction
+    await assertSucceeds(
+      runTransaction(hostDb, async tx => {
+        const scSnap = await tx.get(doc(hostDb, 'scenes', e2eSceneId));
+        const currentApproved = Number(scSnap.data()?.approvedCount || 0);
+        tx.update(doc(hostDb, 'scenes', e2eSceneId, 'joinRequests', attendeeUid), {
+          status: 'approved',
+          decidedAt: serverTimestamp(),
+          decidedBy: hostUid,
+          updatedAt: serverTimestamp()
+        });
+        tx.update(doc(hostDb, 'scenes', e2eSceneId), {
+          approvedCount: currentApproved + 1,
+          lastApprovedRequesterId: attendeeUid,
+          updatedAt: serverTimestamp()
+        });
+      })
+    );
+
+    // Step 8: Verify User B's status changes to approved
+    const approvedReqSnap = await getDoc(doc(hostDb, 'scenes', e2eSceneId, 'joinRequests', attendeeUid));
+    assert.strictEqual(approvedReqSnap.data()?.status, 'approved');
+    assert.strictEqual(approvedReqSnap.data()?.decidedBy, hostUid);
+
+    // Step 9: Verify approvedCount increases from 0 to 1
+    const sceneAfterApprovalSnap = await getDoc(doc(hostDb, 'scenes', e2eSceneId));
+    assert.strictEqual(sceneAfterApprovalSnap.data()?.approvedCount, 1);
+
+    // Step 10: User B reads their request and sees "approved" ("You're Going")
+    const participantViewSnap = await getDoc(doc(participantDb, 'scenes', e2eSceneId, 'joinRequests', attendeeUid));
+    assert.strictEqual(participantViewSnap.data()?.status, 'approved');
+
+    // Step 11: User B leaves the scene with atomic capacity release
+    await assertSucceeds(
+      runTransaction(participantDb, async tx => {
+        const scSnap = await tx.get(doc(participantDb, 'scenes', e2eSceneId));
+        const currentApproved = Number(scSnap.data()?.approvedCount || 0);
+        tx.update(doc(participantDb, 'scenes', e2eSceneId, 'joinRequests', attendeeUid), {
+          status: 'left',
+          updatedAt: serverTimestamp()
+        });
+        tx.update(doc(participantDb, 'scenes', e2eSceneId), {
+          approvedCount: currentApproved - 1,
+          updatedAt: serverTimestamp()
+        });
+      })
+    );
+
+    // Step 12: Verify approvedCount returns to 0 and request status is "left"
+    const finalSceneSnap = await getDoc(doc(hostDb, 'scenes', e2eSceneId));
+    assert.strictEqual(finalSceneSnap.data()?.approvedCount, 0, 'approvedCount returned to 0 after participant left');
+
+    const finalReqSnap = await getDoc(doc(participantDb, 'scenes', e2eSceneId, 'joinRequests', attendeeUid));
+    assert.strictEqual(finalReqSnap.data()?.status, 'left');
   });
 });
 
