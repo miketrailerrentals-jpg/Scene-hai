@@ -9,7 +9,8 @@ export const Sidebar: React.FC = () => {
     navigate,
     openAuthPrompt,
     logout,
-    getActiveDisplayName
+    getActiveDisplayName,
+    unreadNotificationCount
   } = useApp();
 
   const activeTab = currentRoute.startsWith('scene/')
@@ -66,6 +67,7 @@ export const Sidebar: React.FC = () => {
       <nav className="desktop-nav" aria-label="Main navigation">
         {navLinks.map(link => {
           const isActive = activeTab === link.route;
+          const showBadge = link.route === 'inbox' && unreadNotificationCount > 0;
           return (
             <button
               key={link.route}
@@ -79,6 +81,22 @@ export const Sidebar: React.FC = () => {
                 <Icon name={link.icon} size={21} />
               </span>
               <span>{link.label}</span>
+              {showBadge && (
+                <span
+                  style={{
+                    marginLeft: 'auto',
+                    background: 'var(--coral)',
+                    color: '#fff',
+                    fontSize: '10px',
+                    fontWeight: 900,
+                    borderRadius: '50px',
+                    padding: '2px 7px',
+                    lineHeight: '1.3'
+                  }}
+                >
+                  {unreadNotificationCount}
+                </span>
+              )}
             </button>
           );
         })}

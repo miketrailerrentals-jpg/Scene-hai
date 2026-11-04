@@ -19,6 +19,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db, googleProvider, handleFirestoreError } from '../firebase';
 import {
+  InAppNotification,
   JoinRequest,
   LocalStore,
   Scene,
@@ -29,6 +30,8 @@ import {
   dateFor,
   dateShort,
   formatFirestoreScene,
+  formatKarachiDateTime,
+  formatTimeAgo,
   getUserProfile,
   loadLocalStore,
   remain,
@@ -88,6 +91,12 @@ interface AppContextValue {
   removeParticipant: (sceneId: string, requesterId: string) => Promise<boolean>;
   fetchHostJoinRequests: () => Promise<void>;
   retryHostJoinRequests: () => void;
+
+  // Real-Time In-App Notifications
+  notifications: InAppNotification[];
+  unreadNotificationCount: number;
+  markNotificationAsRead: (notificationId: string) => Promise<void>;
+  markAllNotificationsAsRead: () => Promise<void>;
 
   loginWithGoogle: (intendedAction?: any) => Promise<void>;
   logout: () => Promise<void>;
@@ -174,6 +183,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     requestUnsubs: Map<string, () => void>;
   }>({ requestUnsubs: new Map() });
   const sceneRequestsCacheRef = useRef<Map<string, JoinRequest[]>>(new Map());
+
+  // Notification State
+  const [storedNotifications, setStoredNotifications] = useState<InAppNotification[]>([]);
+  const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(() => new Set());
+  const [participantRequests, setParticipantRequests] = useState<Array<{
+    sceneId: string;
+    status: string;
+    createdAt?: any;
+    updatedAt?: any;
+    decidedAt?: any;
+    decidedBy?: string;
+  }>>([]);
+  const [sceneMetadataMap, setSceneMetadataMap] = useState<Map<string, { title: string; status: string; updatedAt?: any }>>(() => new Map());
+  const [hostRequestsTick, setHostRequestsTick] = useState<number>(0);
+  const notifSubscriptionsRef = useRef<{
+    unsubNotifications?: () => void;
+    unsubNotificationStates?: () => void;
+    unsubUserReqs?: () => void;
+  }>({});
 
   // Stable state refs to avoid effect dependency cycles
   const currentUserRef = useRef(currentUser);
@@ -471,50 +499,161 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // User's own join requests across all scenes
-  const fetchMyUserRequests = useCallback(async () => {
+  // User's own join requests and notifications in real time
+  const syncUserRequestsAndNotifications = useCallback(() => {
     const user = currentUserRef.current;
     if (!db || !user) return;
-    try {
-      const q = query(
-        collectionGroup(db, 'joinRequests'),
-        where('requesterId', '==', user.uid)
-      );
-      const snap = await getDocs(q);
-      const requestMap: Record<string, string | null> = {};
-      const approvedSceneIds: string[] = [];
-      snap.forEach(d => {
-        const data = d.data();
-        const sceneId = d.ref.parent.parent?.id;
-        if (sceneId) {
-          requestMap[sceneId] = data.status || null;
-          if (data.status === 'approved') {
-            approvedSceneIds.push(sceneId);
-          }
-        }
-      });
-      setMyJoinRequests(prev => ({ ...prev, ...requestMap }));
 
-      // Ensure all approved scenes are fetched so "Going" tab works even for scenes outside Discover feed
-      for (const sId of approvedSceneIds) {
-        try {
-          const scDoc = await getDoc(doc(db, 'scenes', sId));
-          if (scDoc.exists()) {
-            const formatted = formatFirestoreScene(scDoc.id, scDoc.data(), user.uid);
-            setFirestoreScenes(prev => {
-              if (prev.some(s => s.id === sId)) {
-                return prev.map(s => (s.id === sId ? formatted : s));
-              }
-              return [...prev, formatted];
-            });
-          }
-        } catch (scErr) {
-          console.warn('[Firestore] Error fetching approved scene:', sId, scErr);
-        }
-      }
-    } catch (err) {
-      console.warn('[Firestore] Error querying user join requests:', err);
+    // Clean up old subscriptions if any
+    if (notifSubscriptionsRef.current.unsubNotifications) {
+      notifSubscriptionsRef.current.unsubNotifications();
+      notifSubscriptionsRef.current.unsubNotifications = undefined;
     }
+    if (notifSubscriptionsRef.current.unsubNotificationStates) {
+      notifSubscriptionsRef.current.unsubNotificationStates();
+      notifSubscriptionsRef.current.unsubNotificationStates = undefined;
+    }
+    if (notifSubscriptionsRef.current.unsubUserReqs) {
+      notifSubscriptionsRef.current.unsubUserReqs();
+      notifSubscriptionsRef.current.unsubUserReqs = undefined;
+    }
+
+    // 0. Subscribe to users/{uid}/notifications (Append-Only Event Store)
+    const notifsCol = collection(db, 'users', user.uid, 'notifications');
+    const unsubNotifs = onSnapshot(
+      notifsCol,
+      snap => {
+        const list: InAppNotification[] = [];
+        snap.forEach(d => {
+          const data = d.data();
+          const timestamp = data.createdAt || new Date();
+          const timeFormatted = formatKarachiDateTime(timestamp);
+          const ago = formatTimeAgo(timestamp);
+          list.push({
+            id: d.id,
+            type: data.type,
+            title: data.title || 'Notification',
+            body: data.body || '',
+            sceneId: data.sceneId || '',
+            sceneTitle: data.sceneTitle || 'Scene',
+            timestamp,
+            timeFormatted,
+            ago,
+            read: Boolean(data.read),
+            readAt: data.readAt,
+            actionRoute: data.actionRoute || (data.sceneId ? `scene/${data.sceneId}` : 'discover'),
+            requesterName: data.actorName,
+            requesterId: data.actorId,
+            recipientId: data.recipientId,
+            actorId: data.actorId,
+            actorName: data.actorName
+          });
+        });
+        setStoredNotifications(list);
+      },
+      err => {
+        console.warn('[Firestore] Error syncing notifications:', err);
+      }
+    );
+    notifSubscriptionsRef.current.unsubNotifications = unsubNotifs;
+
+    // 1. Subscribe to users/{uid}/notificationStates
+    const statesCol = collection(db, 'users', user.uid, 'notificationStates');
+    const unsubStates = onSnapshot(
+      statesCol,
+      snap => {
+        const readIds = new Set<string>();
+        snap.forEach(d => {
+          readIds.add(d.id);
+        });
+        setReadNotificationIds(readIds);
+      },
+      err => {
+        console.warn('[Firestore] Error syncing notificationStates:', err);
+      }
+    );
+    notifSubscriptionsRef.current.unsubNotificationStates = unsubStates;
+
+    // 2. Subscribe to user's joinRequests across all scenes
+    const userReqsQuery = query(
+      collectionGroup(db, 'joinRequests'),
+      where('requesterId', '==', user.uid)
+    );
+    const unsubReqs = onSnapshot(
+      userReqsQuery,
+      async snap => {
+        if (!db) return;
+        const firestore = db;
+        const requestMap: Record<string, string | null> = {};
+        const partReqs: Array<{
+          sceneId: string;
+          status: string;
+          createdAt?: any;
+          updatedAt?: any;
+          decidedAt?: any;
+          decidedBy?: string;
+        }> = [];
+        const missingSceneIds: string[] = [];
+
+        snap.forEach(d => {
+          const data = d.data();
+          const sceneId = d.ref.parent.parent?.id;
+          if (sceneId) {
+            requestMap[sceneId] = data.status || null;
+            partReqs.push({
+              sceneId,
+              status: data.status,
+              createdAt: data.createdAt,
+              updatedAt: data.updatedAt,
+              decidedAt: data.decidedAt,
+              decidedBy: data.decidedBy
+            });
+            missingSceneIds.push(sceneId);
+          }
+        });
+
+        setMyJoinRequests(prev => ({ ...prev, ...requestMap }));
+        setParticipantRequests(partReqs);
+
+        // Fetch scene details for titles and status
+        for (const sId of missingSceneIds) {
+          try {
+            const scDoc = await getDoc(doc(firestore, 'scenes', sId));
+            if (scDoc.exists()) {
+              const scData = scDoc.data();
+              setSceneMetadataMap(prev => {
+                const next = new Map(prev);
+                next.set(sId, {
+                  title: scData.title || 'Scene',
+                  status: scData.status || 'active',
+                  updatedAt: scData.updatedAt
+                });
+                return next;
+              });
+
+              if (requestMap[sId] === 'approved') {
+                const formatted = formatFirestoreScene(scDoc.id, scData, user.uid);
+                setFirestoreScenes(prev => {
+                  if (prev.some(s => s.id === sId)) {
+                    return prev.map(s => (s.id === sId ? formatted : s));
+                  }
+                  return [...prev, formatted];
+                });
+              }
+            }
+          } catch (scErr) {
+            console.warn('[Firestore] Error fetching scene doc for participant:', sId, scErr);
+          }
+        }
+      },
+      err => {
+        console.warn('[Firestore] Error querying user join requests:', err);
+      }
+    );
+    notifSubscriptionsRef.current.unsubUserReqs = unsubReqs;
   }, []);
+
+  const fetchMyUserRequests = syncUserRequestsAndNotifications;
 
   // Host Join Requests: real-time listeners for all hosted scenes and their joinRequests
   const fetchHostJoinRequests = useCallback(async () => {
@@ -562,6 +701,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setApprovedParticipants(allApproved);
       setHostJoinRequestsLoading(false);
       setHostJoinRequestsError('');
+      setHostRequestsTick(t => t + 1);
     };
 
     try {
@@ -591,6 +731,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
           currentHostedScenes.sort((a, b) => dateFor(a).getTime() - dateFor(b).getTime());
           setMyHostedScenes(currentHostedScenes);
+
+          // Update scene metadata map for notifications and titles
+          setSceneMetadataMap(prev => {
+            const next = new Map(prev);
+            scenesSnap.forEach(docSnap => {
+              const d = docSnap.data();
+              next.set(docSnap.id, {
+                title: d.title || 'Scene',
+                status: d.status || 'active',
+                updatedAt: d.updatedAt
+              });
+            });
+            return next;
+          });
 
           // Clean up subscriptions for scenes that were deleted or no longer hosted
           hostSubscriptionsRef.current.requestUnsubs.forEach((unsub, scId) => {
@@ -813,6 +967,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setHostJoinRequests([]);
         setApprovedParticipants([]);
         setHostJoinRequestsError('');
+        setReadNotificationIds(new Set());
+        setParticipantRequests([]);
       }
     });
     return () => unsubscribe();
@@ -822,9 +978,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (currentUid && auth?.currentUser) {
       loadOrInitFirestoreProfile(auth.currentUser);
-      fetchMyUserRequests();
+      syncUserRequestsAndNotifications();
       fetchHostJoinRequests();
     } else {
+      if (notifSubscriptionsRef.current.unsubNotificationStates) {
+        notifSubscriptionsRef.current.unsubNotificationStates();
+        notifSubscriptionsRef.current.unsubNotificationStates = undefined;
+      }
+      if (notifSubscriptionsRef.current.unsubUserReqs) {
+        notifSubscriptionsRef.current.unsubUserReqs();
+        notifSubscriptionsRef.current.unsubUserReqs = undefined;
+      }
       if (hostSubscriptionsRef.current.unsubScenes) {
         hostSubscriptionsRef.current.unsubScenes();
         hostSubscriptionsRef.current.unsubScenes = undefined;
@@ -832,6 +996,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       hostSubscriptionsRef.current.requestUnsubs.forEach(unsub => unsub());
       hostSubscriptionsRef.current.requestUnsubs.clear();
       sceneRequestsCacheRef.current.clear();
+      setReadNotificationIds(new Set());
+      setParticipantRequests([]);
       setHostJoinRequests([]);
       setApprovedParticipants([]);
       setHostJoinRequestsLoading(false);
@@ -839,6 +1005,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     return () => {
+      if (notifSubscriptionsRef.current.unsubNotificationStates) {
+        notifSubscriptionsRef.current.unsubNotificationStates();
+        notifSubscriptionsRef.current.unsubNotificationStates = undefined;
+      }
+      if (notifSubscriptionsRef.current.unsubUserReqs) {
+        notifSubscriptionsRef.current.unsubUserReqs();
+        notifSubscriptionsRef.current.unsubUserReqs = undefined;
+      }
       if (hostSubscriptionsRef.current.unsubScenes) {
         hostSubscriptionsRef.current.unsubScenes();
         hostSubscriptionsRef.current.unsubScenes = undefined;
@@ -847,7 +1021,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       hostSubscriptionsRef.current.requestUnsubs.clear();
       sceneRequestsCacheRef.current.clear();
     };
-  }, [currentUid, loadOrInitFirestoreProfile, fetchMyUserRequests, fetchHostJoinRequests]);
+  }, [currentUid, loadOrInitFirestoreProfile, syncUserRequestsAndNotifications, fetchHostJoinRequests]);
 
   // 4. Refresh data when navigating to my-scenes
   useEffect(() => {
@@ -856,6 +1030,235 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       fetchHostJoinRequests();
     }
   }, [currentRoute, currentUid, fetchMyUserRequests, fetchHostJoinRequests]);
+
+  // Real-time In-App Notifications: Combines persistent append-only records with real-time derived events
+  const notifications = useMemo<InAppNotification[]>(() => {
+    if (!currentUser) return [];
+    const list: InAppNotification[] = [];
+
+    // A. Persistent notification records from Firestore (users/{uid}/notifications)
+    storedNotifications.forEach(sn => {
+      // Check if read locally or on document
+      const isRead = sn.read || readNotificationIds.has(sn.id);
+      list.push({
+        ...sn,
+        read: isRead
+      });
+    });
+
+    // B. Real-time active host notifications: derived from joinRequests across all hosted scenes
+    sceneRequestsCacheRef.current.forEach((reqs, _sId) => {
+      reqs.forEach(r => {
+        if (r.status === 'pending') {
+          const createdMs = r.createdAt?.toDate ? r.createdAt.toDate().getTime() : 0;
+          const updatedMs = r.updatedAt?.toDate ? r.updatedAt.toDate().getTime() : createdMs;
+          const isResubmitted = updatedMs > (createdMs + 1000);
+          const effectiveMs = updatedMs || createdMs || 0;
+          // Deterministic ID matching event doc
+          const notifId = isResubmitted
+            ? `host_req_resub_${r.sceneId}_${r.requesterId}_${effectiveMs}`
+            : `host_req_${r.sceneId}_${r.requesterId}_${effectiveMs}`;
+          const timestamp = r.updatedAt || r.createdAt || new Date();
+          const timeFormatted = formatKarachiDateTime(timestamp);
+          const ago = formatTimeAgo(timestamp);
+
+          list.push({
+            id: notifId,
+            type: isResubmitted ? 'join_request_resubmitted' : 'join_request_received',
+            title: isResubmitted ? `Request Re-submitted: ${r.sceneTitle}` : `New Join Request: ${r.sceneTitle}`,
+            body: isResubmitted
+              ? `${r.name} re-submitted their request to join "${r.sceneTitle}".`
+              : `${r.name} requested to join "${r.sceneTitle}".`,
+            sceneId: r.sceneId,
+            sceneTitle: r.sceneTitle,
+            timestamp,
+            timeFormatted,
+            ago,
+            read: readNotificationIds.has(notifId),
+            actionRoute: 'my-scenes',
+            requesterName: r.name,
+            requesterId: r.requesterId
+          });
+        }
+      });
+    });
+
+    // C. Real-time active participant notifications: derived from user's join requests
+    participantRequests.forEach(pr => {
+      const meta = sceneMetadataMap.get(pr.sceneId);
+      const sTitle = meta?.title || firestoreScenes.find(s => s.id === pr.sceneId)?.title || 'Scene';
+      const decidedMs = pr.decidedAt?.toDate
+        ? pr.decidedAt.toDate().getTime()
+        : pr.updatedAt?.toDate
+        ? pr.updatedAt.toDate().getTime()
+        : 0;
+      const timestamp = pr.decidedAt || pr.updatedAt || pr.createdAt || new Date();
+      const timeFormatted = formatKarachiDateTime(timestamp);
+      const ago = formatTimeAgo(timestamp);
+
+      if (pr.status === 'approved') {
+        const notifId = `part_appr_${pr.sceneId}_${currentUser.uid}_${decidedMs}`;
+        list.push({
+          id: notifId,
+          type: 'request_approved',
+          title: 'Join Request Approved! 🎉',
+          body: `You're in! Your request to join "${sTitle}" was approved by the host.`,
+          sceneId: pr.sceneId,
+          sceneTitle: sTitle,
+          timestamp,
+          timeFormatted,
+          ago,
+          read: readNotificationIds.has(notifId),
+          actionRoute: `scene/${pr.sceneId}`
+        });
+      } else if (pr.status === 'declined') {
+        const notifId = `part_decl_${pr.sceneId}_${currentUser.uid}_${decidedMs}`;
+        list.push({
+          id: notifId,
+          type: 'request_declined',
+          title: 'Join Request Declined',
+          body: `Your request to join "${sTitle}" was declined by the host.`,
+          sceneId: pr.sceneId,
+          sceneTitle: sTitle,
+          timestamp,
+          timeFormatted,
+          ago,
+          read: readNotificationIds.has(notifId),
+          actionRoute: `scene/${pr.sceneId}`
+        });
+      } else if (pr.status === 'removed') {
+        const notifId = `part_rem_${pr.sceneId}_${currentUser.uid}_${decidedMs}`;
+        list.push({
+          id: notifId,
+          type: 'participant_removed',
+          title: 'Removed from Scene',
+          body: `You were removed from "${sTitle}" by the host.`,
+          sceneId: pr.sceneId,
+          sceneTitle: sTitle,
+          timestamp,
+          timeFormatted,
+          ago,
+          read: readNotificationIds.has(notifId),
+          actionRoute: `scene/${pr.sceneId}`
+        });
+      }
+
+      // D. Cancelled scene check for participant
+      if (meta && meta.status === 'cancelled' && (pr.status === 'approved' || pr.status === 'left' || pr.status === 'removed')) {
+        const cancMs = meta.updatedAt?.toDate ? meta.updatedAt.toDate().getTime() : 0;
+        const cancTimestamp = meta.updatedAt || new Date();
+        const notifId = `part_canc_${pr.sceneId}_${currentUser.uid}_${cancMs}`;
+        list.push({
+          id: notifId,
+          type: 'scene_cancelled',
+          title: 'Scene Cancelled',
+          body: `"${sTitle}" has been cancelled by the host.`,
+          sceneId: pr.sceneId,
+          sceneTitle: sTitle,
+          timestamp: cancTimestamp,
+          timeFormatted: formatKarachiDateTime(cancTimestamp),
+          ago: formatTimeAgo(cancTimestamp),
+          read: readNotificationIds.has(notifId),
+          actionRoute: `scene/${pr.sceneId}`
+        });
+      }
+    });
+
+    // Deduplicate notifications by ID (persistent doc ID wins, preserving read state)
+    const uniqueMap = new Map<string, InAppNotification>();
+    list.forEach(item => {
+      if (!uniqueMap.has(item.id)) {
+        uniqueMap.set(item.id, item);
+      } else {
+        const existing = uniqueMap.get(item.id)!;
+        // If either is marked read, preserve read: true
+        if (item.read && !existing.read) {
+          existing.read = true;
+        }
+      }
+    });
+
+    const uniqueList = Array.from(uniqueMap.values());
+    uniqueList.sort((a, b) => {
+      const ta = a.timestamp?.toDate ? a.timestamp.toDate().getTime() : (a.timestamp instanceof Date ? a.timestamp.getTime() : 0);
+      const tb = b.timestamp?.toDate ? b.timestamp.toDate().getTime() : (b.timestamp instanceof Date ? b.timestamp.getTime() : 0);
+      return tb - ta;
+    });
+
+    return uniqueList;
+  }, [currentUser, storedNotifications, readNotificationIds, participantRequests, sceneMetadataMap, firestoreScenes, hostRequestsTick]);
+
+  const unreadNotificationCount = useMemo(() => {
+    return notifications.filter(n => !n.read).length;
+  }, [notifications]);
+
+  const markNotificationAsRead = useCallback(async (notificationId: string) => {
+    const user = currentUserRef.current;
+    const firestore = db;
+    if (!firestore || !user || !notificationId) return;
+    try {
+      // 1. Mark in users/{uid}/notificationStates
+      await setDoc(doc(firestore, 'users', user.uid, 'notificationStates', notificationId), {
+        notificationId,
+        readAt: serverTimestamp()
+      });
+
+      // 2. If it exists in users/{uid}/notifications, also update read and readAt directly
+      const notifDocRef = doc(firestore, 'users', user.uid, 'notifications', notificationId);
+      const snap = await getDoc(notifDocRef);
+      if (snap.exists()) {
+        await updateDoc(notifDocRef, {
+          read: true,
+          readAt: serverTimestamp()
+        });
+      }
+
+      setReadNotificationIds(prev => new Set(prev).add(notificationId));
+      setStoredNotifications(prev =>
+        prev.map(n => (n.id === notificationId ? { ...n, read: true } : n))
+      );
+    } catch (err) {
+      console.warn('[Firestore] Error marking notification as read:', err);
+    }
+  }, []);
+
+  const markAllNotificationsAsRead = useCallback(async () => {
+    const user = currentUserRef.current;
+    const firestore = db;
+    if (!firestore || !user) return;
+    const unread = notifications.filter(n => !n.read);
+    if (unread.length === 0) return;
+    try {
+      await Promise.all(
+        unread.map(async n => {
+          // Write to notificationStates
+          await setDoc(doc(firestore, 'users', user.uid, 'notificationStates', n.id), {
+            notificationId: n.id,
+            readAt: serverTimestamp()
+          });
+          // Update doc if present in notifications subcollection
+          const notifDocRef = doc(firestore, 'users', user.uid, 'notifications', n.id);
+          const snap = await getDoc(notifDocRef);
+          if (snap.exists()) {
+            await updateDoc(notifDocRef, {
+              read: true,
+              readAt: serverTimestamp()
+            });
+          }
+        })
+      );
+      setReadNotificationIds(prev => {
+        const next = new Set(prev);
+        unread.forEach(n => next.add(n.id));
+        return next;
+      });
+      setStoredNotifications(prev =>
+        prev.map(n => ({ ...n, read: true }))
+      );
+    } catch (err) {
+      console.warn('[Firestore] Error marking all notifications as read:', err);
+    }
+  }, [notifications]);
 
   // Open & Close Auth Modal
   const openAuthPrompt = useCallback(
@@ -1044,10 +1447,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       try {
         if (db && scene.isFirestore) {
-          await updateDoc(doc(db, 'scenes', sceneId), {
+          const firestore = db;
+          await updateDoc(doc(firestore, 'scenes', sceneId), {
             status: 'cancelled',
             updatedAt: serverTimestamp()
           });
+
+          // Phase 3.5B: Write persistent cancellation notification events to attendees
+          try {
+            const reqsSnap = await getDocs(collection(firestore, 'scenes', sceneId, 'joinRequests'));
+            const cancelBatchPromises: Promise<any>[] = [];
+            reqsSnap.forEach(d => {
+              const rData = d.data();
+              if (rData.status === 'approved' && d.id !== currentUser?.uid) {
+                const notifId = `part_canc_${sceneId}_${d.id}_${Date.now()}`;
+                const notifRef = doc(firestore, 'users', d.id, 'notifications', notifId);
+                cancelBatchPromises.push(
+                  setDoc(notifRef, {
+                    id: notifId,
+                    recipientId: d.id,
+                    actorId: currentUser?.uid,
+                    actorName: getActiveDisplayName() || currentUser?.displayName || 'Host',
+                    type: 'scene_cancelled',
+                    sceneId,
+                    sceneTitle: scene.title,
+                    title: 'Scene Cancelled',
+                    body: `"${scene.title}" has been cancelled by the host.`,
+                    actionRoute: `scene/${sceneId}`,
+                    read: false,
+                    createdAt: serverTimestamp()
+                  })
+                );
+              }
+            });
+            await Promise.all(cancelBatchPromises);
+          } catch (notifErr) {
+            console.warn('[Notifications] Could not dispatch cancellation notifications:', notifErr);
+          }
+
           setMyHostedScenes(prev =>
             prev.map(s => (s.id === sceneId ? { ...s, status: 'cancelled' } : s))
           );
@@ -1065,7 +1502,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         showToast('Failed to cancel scene: ' + (err.message || 'Unknown error'));
       }
     },
-    [allScenes, showToast, updateStore]
+    [allScenes, showToast, updateStore, currentUser, getActiveDisplayName]
   );
 
   // Submit Join Request
@@ -1138,6 +1575,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             status: 'pending',
             updatedAt: serverTimestamp()
           });
+
+          // Phase 3.5B: Write persistent notification event to host
+          const hostId = sc.hostId;
+          if (hostId && hostId !== currentUser.uid) {
+            const notifId = `host_req_resub_${sceneId}_${currentUser.uid}_${Date.now()}`;
+            const hostNotifRef = doc(db, 'users', hostId, 'notifications', notifId);
+            const myName = getActiveDisplayName() || currentUser.displayName || 'Scene Explorer';
+            await setDoc(hostNotifRef, {
+              id: notifId,
+              recipientId: hostId,
+              actorId: currentUser.uid,
+              actorName: myName,
+              type: 'join_request_resubmitted',
+              sceneId,
+              sceneTitle: sc.title,
+              title: `Request Re-submitted: ${sc.title}`,
+              body: `${myName} re-submitted their request to join "${sc.title}".`,
+              actionRoute: 'my-scenes',
+              read: false,
+              createdAt: serverTimestamp()
+            });
+          }
         } else {
           const userDocRef = doc(db, 'users', currentUser.uid);
           const userSnap = await getDoc(userDocRef);
@@ -1173,6 +1632,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp()
           });
+
+          // Phase 3.5B: Write persistent notification event to host
+          const hostId = sc.hostId;
+          if (hostId && hostId !== currentUser.uid) {
+            const notifId = `host_req_${sceneId}_${currentUser.uid}_${Date.now()}`;
+            const hostNotifRef = doc(db, 'users', hostId, 'notifications', notifId);
+            await setDoc(hostNotifRef, {
+              id: notifId,
+              recipientId: hostId,
+              actorId: currentUser.uid,
+              actorName: finalDisplayName,
+              type: 'join_request_received',
+              sceneId,
+              sceneTitle: sc.title,
+              title: `New Join Request: ${sc.title}`,
+              body: `${finalDisplayName} requested to join "${sc.title}".`,
+              actionRoute: 'my-scenes',
+              read: false,
+              createdAt: serverTimestamp()
+            });
+          }
         }
         setMyJoinRequests(prev => ({ ...prev, [sceneId]: 'pending' }));
         showToast('Join request sent! The host will review your request. ✨');
@@ -1270,6 +1750,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         });
 
+        // Phase 3.5B: Write persistent notification event to approved participant
+        const scTitle = allScenes.find(s => s.id === sceneId)?.title || 'Scene';
+        const notifId = `part_appr_${sceneId}_${requesterId}_${Date.now()}`;
+        const partNotifRef = doc(db, 'users', requesterId, 'notifications', notifId);
+        await setDoc(partNotifRef, {
+          id: notifId,
+          recipientId: requesterId,
+          actorId: currentUser.uid,
+          actorName: getActiveDisplayName() || currentUser.displayName || 'Host',
+          type: 'request_approved',
+          sceneId,
+          sceneTitle: scTitle,
+          title: 'Join Request Approved! 🎉',
+          body: `You're in! Your request to join "${scTitle}" was approved by the host.`,
+          actionRoute: `scene/${sceneId}`,
+          read: false,
+          createdAt: serverTimestamp()
+        });
+
         // Update local state
         setHostJoinRequests(prev => prev.filter(r => !(r.sceneId === sceneId && r.requesterId === requesterId)));
         await fetchHostJoinRequests();
@@ -1285,7 +1784,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setJoinRequestLoading(false);
       }
     },
-    [currentUser, showToast, fetchHostJoinRequests, fetchMyHostedScenes, fetchDiscoveryScenes]
+    [currentUser, showToast, fetchHostJoinRequests, fetchMyHostedScenes, fetchDiscoveryScenes, allScenes, getActiveDisplayName]
   );
 
   // Phase 3.3B: Secure Host Decline (no capacity change)
@@ -1302,6 +1801,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           updatedAt: serverTimestamp()
         });
 
+        // Phase 3.5B: Write persistent notification event to declined requester
+        const scTitle = allScenes.find(s => s.id === sceneId)?.title || 'Scene';
+        const notifId = `part_decl_${sceneId}_${requesterId}_${Date.now()}`;
+        const partNotifRef = doc(db, 'users', requesterId, 'notifications', notifId);
+        await setDoc(partNotifRef, {
+          id: notifId,
+          recipientId: requesterId,
+          actorId: currentUser.uid,
+          actorName: getActiveDisplayName() || currentUser.displayName || 'Host',
+          type: 'request_declined',
+          sceneId,
+          sceneTitle: scTitle,
+          title: 'Join Request Declined',
+          body: `Your request to join "${scTitle}" was declined by the host.`,
+          actionRoute: `scene/${sceneId}`,
+          read: false,
+          createdAt: serverTimestamp()
+        });
+
         setHostJoinRequests(prev => prev.filter(r => !(r.sceneId === sceneId && r.requesterId === requesterId)));
         showToast('Request declined.');
         return true;
@@ -1313,7 +1831,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setJoinRequestLoading(false);
       }
     },
-    [currentUser, showToast]
+    [currentUser, showToast, allScenes, getActiveDisplayName]
   );
 
   // Phase 3.3B: Approved Participant Leaves (atomic decrement)
@@ -1412,6 +1930,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         });
 
+        // Phase 3.5B: Write persistent notification event to removed participant
+        const scTitle = allScenes.find(s => s.id === sceneId)?.title || 'Scene';
+        const notifId = `part_rem_${sceneId}_${requesterId}_${Date.now()}`;
+        const partNotifRef = doc(db, 'users', requesterId, 'notifications', notifId);
+        await setDoc(partNotifRef, {
+          id: notifId,
+          recipientId: requesterId,
+          actorId: currentUser.uid,
+          actorName: getActiveDisplayName() || currentUser.displayName || 'Host',
+          type: 'participant_removed',
+          sceneId,
+          sceneTitle: scTitle,
+          title: 'Removed from Scene',
+          body: `You were removed from "${scTitle}" by the host.`,
+          actionRoute: `scene/${sceneId}`,
+          read: false,
+          createdAt: serverTimestamp()
+        });
+
         setApprovedParticipants(prev => prev.filter(r => !(r.sceneId === sceneId && r.requesterId === requesterId)));
         await fetchHostJoinRequests();
         await fetchMyHostedScenes();
@@ -1426,7 +1963,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setJoinRequestLoading(false);
       }
     },
-    [currentUser, showToast, fetchHostJoinRequests, fetchMyHostedScenes, fetchDiscoveryScenes]
+    [currentUser, showToast, fetchHostJoinRequests, fetchMyHostedScenes, fetchDiscoveryScenes, allScenes, getActiveDisplayName]
   );
 
   // Create Scene (with approvedCount initialized to 0)
@@ -1963,6 +2500,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     removeParticipant,
     fetchHostJoinRequests,
     retryHostJoinRequests: fetchHostJoinRequests,
+
+    // Real-Time In-App Notifications
+    notifications,
+    unreadNotificationCount,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
 
     loginWithGoogle,
     logout,

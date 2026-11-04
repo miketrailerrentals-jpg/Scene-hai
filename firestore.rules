@@ -90,11 +90,76 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'bio', 'city', 'area', 'interests', 'updatedAt']);
 
       allow delete: if false;
-    }
 
-    // Collection group read for joinRequests: allows users to query their own requests across scenes
-    match /{path=**}/joinRequests/{requesterUid} {
-      allow read: if isAuthenticated() && request.auth.uid == requesterUid;
+      // Real-time in-app notification read states: users/{userId}/notificationStates/{notificationId} (Legacy/Read status tracking)
+      match /notificationStates/{notificationId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.keys().hasOnly(['notificationId', 'readAt'])
+          && request.resource.data.readAt == request.time
+          && request.resource.data.notificationId is string
+          && request.resource.data.notificationId == notificationId
+          && request.resource.data.notificationId.size() <= 200;
+        allow update, delete: if false;
+      }
+
+      // Phase 3.5B: Append-Only Notification Event History: users/{userId}/notifications/{notificationId}
+      // Immutable event log delivered to recipient. Recipient can only mark as read.
+      match /notifications/{notificationId} {
+        // Read: Only recipient can view their notification history
+        allow get, list: if isOwner(userId);
+
+        // Update: Recipient can exclusively toggle read status (read, readAt)
+        allow update: if isOwner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt'])
+          && request.resource.data.read is bool
+          && (request.resource.data.readAt == request.time || request.resource.data.readAt is timestamp)
+          && request.resource.data.id == resource.data.id
+          && request.resource.data.type == resource.data.type
+          && request.resource.data.sceneId == resource.data.sceneId
+          && request.resource.data.createdAt == resource.data.createdAt;
+
+        // Delete: Notifications are permanent audit history
+        allow delete: if false;
+
+        // Create: Strictly authorized lifecycle event creation
+        allow create: if isAuthenticated()
+          && request.resource.data.keys().hasOnly([
+            'id', 'recipientId', 'actorId', 'actorName', 'type',
+            'sceneId', 'sceneTitle', 'title', 'body', 'actionRoute',
+            'read', 'createdAt'
+          ])
+          && request.resource.data.id == notificationId
+          && request.resource.data.recipientId == userId
+          && request.resource.data.actorId == request.auth.uid
+          && request.resource.data.read == false
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 120
+          && request.resource.data.body is string && request.resource.data.body.size() > 0 && request.resource.data.body.size() <= 500
+          && request.resource.data.sceneTitle is string && request.resource.data.sceneTitle.size() <= 100
+          && exists(/databases/$(database)/documents/scenes/$(request.resource.data.sceneId))
+          && (
+            // Event 1: Requester notifies Host of a new/resubmitted join request
+            (
+              (request.resource.data.type == 'join_request_received' || request.resource.data.type == 'join_request_resubmitted')
+              && userId == get(/databases/$(database)/documents/scenes/$(request.resource.data.sceneId)).data.hostId
+              && exists(/databases/$(database)/documents/scenes/$(request.resource.data.sceneId)/joinRequests/$(request.auth.uid))
+            )
+            // Event 2: Host notifies Requester of approval, decline, removal, or cancellation
+            || (
+              request.resource.data.type in ['request_approved', 'request_declined', 'participant_removed', 'scene_cancelled']
+              && request.auth.uid == get(/databases/$(database)/documents/scenes/$(request.resource.data.sceneId)).data.hostId
+              && (
+                // For approval/decline/removal, must have corresponding join request record
+                (request.resource.data.type in ['request_approved', 'request_declined', 'participant_removed']
+                  && exists(/databases/$(database)/documents/scenes/$(request.resource.data.sceneId)/joinRequests/$(userId)))
+                // For scene cancellation, target user is an approved attendee or member
+                || (request.resource.data.type == 'scene_cancelled'
+                  && exists(/databases/$(database)/documents/scenes/$(request.resource.data.sceneId)/joinRequests/$(userId)))
+              )
+            )
+          );
+      }
     }
 
     // Scene documents: scenes/{sceneId}

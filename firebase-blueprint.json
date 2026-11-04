@@ -200,6 +200,106 @@
         }
       },
       "required": ["venue", "updatedAt"]
+    },
+    "SceneMessage": {
+      "title": "SceneMessage",
+      "description": "Real-time group chat message within an active scene",
+      "type": "object",
+      "properties": {
+        "senderId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the message sender"
+        },
+        "senderDisplayName": {
+          "type": "string",
+          "description": "Snapshot of sender display name from their profile"
+        },
+        "text": {
+          "type": "string",
+          "description": "Message text (1 to 1000 characters)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when message was sent"
+        }
+      },
+      "required": ["senderId", "senderDisplayName", "text", "createdAt"]
+    },
+    "NotificationState": {
+      "title": "NotificationState",
+      "description": "Read status record for an in-app notification for the user",
+      "type": "object",
+      "properties": {
+        "notificationId": {
+          "type": "string",
+          "description": "Deterministic ID of the notification marked as read"
+        },
+        "readAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when notification was marked as read"
+        }
+      },
+      "required": ["notificationId", "readAt"]
+    },
+    "NotificationEvent": {
+      "title": "NotificationEvent",
+      "description": "Append-only immutable event record delivered to a user's notification feed",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique notification event document ID"
+        },
+        "recipientId": {
+          "type": "string",
+          "description": "UID of the user receiving the notification"
+        },
+        "actorId": {
+          "type": "string",
+          "description": "UID of the authenticated user who initiated the event"
+        },
+        "actorName": {
+          "type": "string",
+          "description": "Display name snapshot of the actor"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["join_request_received", "join_request_resubmitted", "request_approved", "request_declined", "participant_removed", "scene_cancelled"],
+          "description": "Event lifecycle type"
+        },
+        "sceneId": {
+          "type": "string",
+          "description": "Target scene ID"
+        },
+        "sceneTitle": {
+          "type": "string",
+          "description": "Snapshot of scene title"
+        },
+        "title": {
+          "type": "string",
+          "description": "Notification heading"
+        },
+        "body": {
+          "type": "string",
+          "description": "Detailed notification text message"
+        },
+        "actionRoute": {
+          "type": "string",
+          "description": "Target app route (e.g. my-scenes or scene/:id)"
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Whether recipient has viewed or marked this notification as read"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when event was triggered"
+        }
+      },
+      "required": ["id", "recipientId", "actorId", "type", "sceneId", "sceneTitle", "title", "body", "read", "createdAt"]
     }
   },
   "firestore": {
@@ -208,6 +308,18 @@
         "$ref": "#/entities/UserProfile"
       },
       "description": "Persistent Cloud Firestore user profiles indexed by Firebase Auth UID. Each user can only read and write their own profile."
+    },
+    "/users/{userId}/notificationStates/{notificationId}": {
+      "schema": {
+        "$ref": "#/entities/NotificationState"
+      },
+      "description": "User notification read states. Only the authenticated user can read and create their own notification read records."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": {
+        "$ref": "#/entities/NotificationEvent"
+      },
+      "description": "Persistent append-only notification events delivered to the recipient. Reversible transitions cannot delete historical notifications."
     },
     "/scenes/{sceneId}": {
       "schema": {
@@ -226,6 +338,12 @@
         "$ref": "#/entities/ScenePrivateDetails"
       },
       "description": "Exact meetup location and private host notes accessible ONLY by the host and approved participants."
+    },
+    "/scenes/{sceneId}/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/SceneMessage"
+      },
+      "description": "Real-time group chat messages for a scene. Readable and writable only by the scene host or approved attendees."
     }
   }
 }

@@ -12,7 +12,8 @@ export const Topbar: React.FC = () => {
     setFilters,
     navigate,
     openAuthPrompt,
-    getActiveDisplayName
+    getActiveDisplayName,
+    unreadNotificationCount
   } = useApp();
 
   const handleCitySelect = (selectedCity: string) => {
@@ -27,7 +28,7 @@ export const Topbar: React.FC = () => {
     navigate('discover');
   };
 
-  const hasUnseenNotifs = store.notifications.some(n => !n.seen);
+  const hasUnseenNotifs = unreadNotificationCount > 0;
   const displayName = getActiveDisplayName();
   const initials = displayName
     .split(' ')

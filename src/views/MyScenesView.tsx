@@ -107,6 +107,9 @@ export const MyScenesView: React.FC = () => {
             )}
             {tag === 'Hosting' && (
               <>
+                <button type="button" onClick={() => navigate(`chat/${s.id}`)}>
+                  <Icon name="message" size={15} /> Chat
+                </button>
                 <button type="button" onClick={() => openEditScene(s.id)}>
                   <Icon name="edit" size={14} /> Edit
                 </button>

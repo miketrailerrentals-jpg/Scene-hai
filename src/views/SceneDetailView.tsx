@@ -163,13 +163,24 @@ export const SceneDetailView: React.FC<{ sceneId: string }> = ({ sceneId }) => {
     );
   } else if (isHosting) {
     actionButtonNode = (
-      <button
-        type="button"
-        className="button action-join"
-        onClick={() => openEditScene(scene.id)}
-      >
-        <Icon name="edit" size={16} /> Edit scene
-      </button>
+      <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+        <button
+          type="button"
+          className="button action-join"
+          onClick={() => navigate(`chat/${scene.id}`)}
+          style={{ flex: 1 }}
+        >
+          <Icon name="message" size={16} /> Scene Chat
+        </button>
+        <button
+          type="button"
+          className="button"
+          onClick={() => openEditScene(scene.id)}
+          style={{ background: '#ede8e1', color: '#1f2140', padding: '12px 16px' }}
+        >
+          <Icon name="edit" size={16} /> Edit
+        </button>
+      </div>
     );
   } else if (scene.isFirestore) {
     if (!currentUser) {
@@ -184,14 +195,14 @@ export const SceneDetailView: React.FC<{ sceneId: string }> = ({ sceneId }) => {
       );
     } else if (reqStatus === 'approved') {
       actionButtonNode = (
-        <div className="request-status-bar">
+        <div className="request-status-bar" style={{ display: 'flex', gap: '8px', flex: 1 }}>
           <button
             type="button"
             className="button action-join"
-            disabled
+            onClick={() => navigate(`chat/${scene.id}`)}
             style={{ background: '#d8fa65', color: '#1f2140', flex: 1 }}
           >
-            <Icon name="check" size={16} /> You're Going
+            <Icon name="message" size={16} /> Open Scene Chat
           </button>
           <button
             type="button"
@@ -200,7 +211,7 @@ export const SceneDetailView: React.FC<{ sceneId: string }> = ({ sceneId }) => {
             disabled={joinRequestLoading}
             title="Leave this scene and release your spot"
           >
-            {joinRequestLoading ? '...' : 'Leave scene'}
+            {joinRequestLoading ? '...' : 'Leave'}
           </button>
         </div>
       );
@@ -402,6 +413,36 @@ export const SceneDetailView: React.FC<{ sceneId: string }> = ({ sceneId }) => {
 
         <h1>{scene.title}</h1>
 
+        {scene.isFirestore && currentUser && isHosting && (
+          <div
+            style={{
+              background: '#eef3fe',
+              border: '1px solid #d4e0fc',
+              color: '#284282',
+              padding: '12px 16px',
+              borderRadius: '14px',
+              marginBottom: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '10px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+              <Icon name="message" size={18} />
+              <span><strong>Scene Group Chat is live!</strong> Coordinate with approved attendees.</span>
+            </div>
+            <button
+              type="button"
+              className="button dark"
+              onClick={() => navigate(`chat/${scene.id}`)}
+              style={{ padding: '6px 14px', fontSize: '11px', borderRadius: '8px' }}
+            >
+              Open chat
+            </button>
+          </div>
+        )}
+
         {scene.isFirestore && currentUser && !isHosting && reqStatus === 'approved' && (
           <div
             style={{
@@ -414,22 +455,33 @@ export const SceneDetailView: React.FC<{ sceneId: string }> = ({ sceneId }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: '10px'
+              gap: '10px',
+              flexWrap: 'wrap'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
               <Icon name="check" size={18} />
               <span><strong>You're confirmed for this scene!</strong> Host has approved your spot.</span>
             </div>
-            <button
-              type="button"
-              className="button button-withdraw host-action-btn-danger"
-              onClick={() => leaveScene(scene.id)}
-              disabled={joinRequestLoading}
-              style={{ padding: '6px 12px', fontSize: '11px' }}
-            >
-              {joinRequestLoading ? '...' : 'Leave scene'}
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="button"
+                onClick={() => navigate(`chat/${scene.id}`)}
+                style={{ background: '#206a2e', color: '#fff', padding: '6px 12px', fontSize: '11px', borderRadius: '8px' }}
+              >
+                <Icon name="message" size={14} /> Open chat
+              </button>
+              <button
+                type="button"
+                className="button button-withdraw host-action-btn-danger"
+                onClick={() => leaveScene(scene.id)}
+                disabled={joinRequestLoading}
+                style={{ padding: '6px 12px', fontSize: '11px' }}
+              >
+                {joinRequestLoading ? '...' : 'Leave scene'}
+              </button>
+            </div>
           </div>
         )}
 

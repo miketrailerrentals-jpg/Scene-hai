@@ -70,6 +70,39 @@ export interface DemoIncomingRequest {
   message: string;
 }
 
+export type NotificationType =
+  | 'join_request_received'
+  | 'join_request_resubmitted'
+  | 'request_approved'
+  | 'request_declined'
+  | 'participant_removed'
+  | 'scene_cancelled';
+
+export interface InAppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  sceneId: string;
+  sceneTitle: string;
+  timestamp: any;
+  timeFormatted: string;
+  ago: string;
+  read: boolean;
+  readAt?: any;
+  actionRoute: string;
+  requesterName?: string;
+  requesterId?: string;
+  recipientId?: string;
+  actorId?: string;
+  actorName?: string;
+}
+
+export interface NotificationStateDoc {
+  notificationId: string;
+  readAt: any;
+}
+
 export interface NotificationItem {
   id: string;
   type: 'welcome' | 'safety' | 'approval' | 'update';
@@ -84,6 +117,14 @@ export interface ChatMessage {
   name: string;
   text: string;
   time: string;
+}
+
+export interface SceneMessage {
+  id: string;
+  senderId: string;
+  senderDisplayName: string;
+  text: string;
+  createdAt: any;
 }
 
 export interface Category {

@@ -13,6 +13,8 @@ import {
   where,
   setDoc,
   updateDoc,
+  deleteDoc,
+  addDoc,
   runTransaction,
   serverTimestamp,
   Timestamp
@@ -815,5 +817,666 @@ describe('Scene Hai? Firestore Security Rules Verification Suite', () => {
     const finalReqSnap = await getDoc(doc(participantDb, 'scenes', e2eSceneId, 'joinRequests', attendeeUid));
     assert.strictEqual(finalReqSnap.data()?.status, 'left');
   });
+
+  describe('Phase 3.4: Real-Time Scene Group Chat Security Suite', () => {
+    const chatSceneId = 'scene-realtime-chat';
+    const cancelledSceneId = 'scene-cancelled-chat';
+    const msgId = 'msg-seeded-001';
+
+    async function seedChatData() {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const db = context.firestore();
+
+        // Host profile
+        await setDoc(doc(db, 'users', hostUid), {
+          displayName: 'Ahmad Host',
+          city: 'Lahore',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+
+        // Approved attendee profile
+        await setDoc(doc(db, 'users', attendeeUid), {
+          displayName: 'Bilal Guest',
+          city: 'Lahore',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+
+        // Pending requester profile
+        await setDoc(doc(db, 'users', attendee2Uid), {
+          displayName: 'Hamza Guest',
+          city: 'Lahore',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+
+        // Stranger profile
+        await setDoc(doc(db, 'users', strangerUid), {
+          displayName: 'Stranger User',
+          city: 'Karachi',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+
+        const futureDate = new Date(Date.now() + 86400000 * 3);
+
+        // Active scene
+        await setDoc(doc(db, 'scenes', chatSceneId), {
+          hostId: hostUid,
+          hostDisplayName: 'Ahmad Host',
+          title: 'Sunday Group Chat Scene',
+          description: 'Active scene for testing chat message permissions.',
+          category: 'tech',
+          city: 'Lahore',
+          area: 'Gulberg',
+          venue: 'Coffee Shop',
+          startsAt: Timestamp.fromDate(futureDate),
+          timezone: 'Asia/Karachi',
+          budgetPerPerson: 600,
+          maxParticipants: 5,
+          approvedCount: 1,
+          privacy: 'public',
+          status: 'active',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+
+        // Cancelled scene
+        await setDoc(doc(db, 'scenes', cancelledSceneId), {
+          hostId: hostUid,
+          hostDisplayName: 'Ahmad Host',
+          title: 'Cancelled Meetup Scene',
+          description: 'Meetup cancelled due to heavy rain in Lahore.',
+          category: 'sports',
+          city: 'Lahore',
+          area: 'Model Town',
+          venue: 'Park',
+          startsAt: Timestamp.fromDate(futureDate),
+          timezone: 'Asia/Karachi',
+          budgetPerPerson: 0,
+          maxParticipants: 10,
+          approvedCount: 1,
+          privacy: 'public',
+          status: 'cancelled',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+
+        // Attendee joinRequest: approved
+        await setDoc(doc(db, 'scenes', chatSceneId, 'joinRequests', attendeeUid), {
+          requesterId: attendeeUid,
+          requesterDisplayName: 'Bilal Guest',
+          status: 'approved',
+          decidedAt: Timestamp.now(),
+          decidedBy: hostUid,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+
+        // Attendee joinRequest on cancelled scene: approved
+        await setDoc(doc(db, 'scenes', cancelledSceneId, 'joinRequests', attendeeUid), {
+          requesterId: attendeeUid,
+          requesterDisplayName: 'Bilal Guest',
+          status: 'approved',
+          decidedAt: Timestamp.now(),
+          decidedBy: hostUid,
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+
+        // Attendee2 joinRequest: pending
+        await setDoc(doc(db, 'scenes', chatSceneId, 'joinRequests', attendee2Uid), {
+          requesterId: attendee2Uid,
+          requesterDisplayName: 'Hamza Guest',
+          status: 'pending',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+
+        // Seeded message in active scene
+        await setDoc(doc(db, 'scenes', chatSceneId, 'messages', msgId), {
+          senderId: hostUid,
+          senderDisplayName: 'Ahmad Host',
+          text: 'Welcome to the scene group chat!',
+          createdAt: Timestamp.now()
+        });
+
+        // Seeded message in cancelled scene
+        await setDoc(doc(db, 'scenes', cancelledSceneId, 'messages', 'msg-cancelled-001'), {
+          senderId: hostUid,
+          senderDisplayName: 'Ahmad Host',
+          text: 'Hey everyone, the event is cancelled due to rain.',
+          createdAt: Timestamp.now()
+        });
+      });
+    }
+
+    test('1. Approved participant can read messages in active scene', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertSucceeds(getDoc(doc(db, 'scenes', chatSceneId, 'messages', msgId)));
+      await assertSucceeds(getDocs(collection(db, 'scenes', chatSceneId, 'messages')));
+    });
+
+    test('2. Host can read messages in their scene', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(hostUid).firestore();
+      await assertSucceeds(getDoc(doc(db, 'scenes', chatSceneId, 'messages', msgId)));
+      await assertSucceeds(getDocs(collection(db, 'scenes', chatSceneId, 'messages')));
+    });
+
+    test('3. Pending requester CANNOT read messages', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(attendee2Uid).firestore();
+      await assertFails(getDoc(doc(db, 'scenes', chatSceneId, 'messages', msgId)));
+      await assertFails(getDocs(collection(db, 'scenes', chatSceneId, 'messages')));
+    });
+
+    test('4. Stranger (no request) CANNOT read messages', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(strangerUid).firestore();
+      await assertFails(getDoc(doc(db, 'scenes', chatSceneId, 'messages', msgId)));
+      await assertFails(getDocs(collection(db, 'scenes', chatSceneId, 'messages')));
+    });
+
+    test('5. Unauthenticated user CANNOT read messages', async () => {
+      await seedChatData();
+      const db = testEnv.unauthenticatedContext().firestore();
+      await assertFails(getDoc(doc(db, 'scenes', chatSceneId, 'messages', msgId)));
+      await assertFails(getDocs(collection(db, 'scenes', chatSceneId, 'messages')));
+    });
+
+    test('6. Approved participant can write valid message to active scene', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertSucceeds(
+        setDoc(doc(db, 'scenes', chatSceneId, 'messages', 'msg-new-attendee'), {
+          senderId: attendeeUid,
+          senderDisplayName: 'Bilal Guest',
+          text: 'Assalam o alaikum! Looking forward to meeting everyone.',
+          createdAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('7. Host can write valid message to active scene', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(hostUid).firestore();
+      await assertSucceeds(
+        setDoc(doc(db, 'scenes', chatSceneId, 'messages', 'msg-new-host'), {
+          senderId: hostUid,
+          senderDisplayName: 'Ahmad Host',
+          text: 'Please arrive 10 minutes early.',
+          createdAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('8. Spoofed senderId is rejected', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertFails(
+        setDoc(doc(db, 'scenes', chatSceneId, 'messages', 'msg-spoof-id'), {
+          senderId: hostUid, // Mismatched UID
+          senderDisplayName: 'Bilal Guest',
+          text: 'Trying to impersonate host',
+          createdAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('9. Spoofed senderDisplayName is rejected', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertFails(
+        setDoc(doc(db, 'scenes', chatSceneId, 'messages', 'msg-spoof-name'), {
+          senderId: attendeeUid,
+          senderDisplayName: 'Fake Name', // Does not match profile 'Bilal Guest'
+          text: 'Trying to disguise identity',
+          createdAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('10. Empty or whitespace-only text is rejected', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertFails(
+        setDoc(doc(db, 'scenes', chatSceneId, 'messages', 'msg-empty'), {
+          senderId: attendeeUid,
+          senderDisplayName: 'Bilal Guest',
+          text: '   ',
+          createdAt: serverTimestamp()
+        })
+      );
+      await assertFails(
+        setDoc(doc(db, 'scenes', chatSceneId, 'messages', 'msg-blank'), {
+          senderId: attendeeUid,
+          senderDisplayName: 'Bilal Guest',
+          text: '',
+          createdAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('11. Message exceeding 1000 characters is rejected', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(attendeeUid).firestore();
+      const longText = 'A'.repeat(1001);
+      await assertFails(
+        setDoc(doc(db, 'scenes', chatSceneId, 'messages', 'msg-long'), {
+          senderId: attendeeUid,
+          senderDisplayName: 'Bilal Guest',
+          text: longText,
+          createdAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('12. Extra unauthorized keys are rejected', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertFails(
+        setDoc(doc(db, 'scenes', chatSceneId, 'messages', 'msg-extra'), {
+          senderId: attendeeUid,
+          senderDisplayName: 'Bilal Guest',
+          text: 'Hello world',
+          createdAt: serverTimestamp(),
+          role: 'admin' // Unauthorized key
+        })
+      );
+    });
+
+    test('13. Sending message to a CANCELLED scene is rejected', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertFails(
+        setDoc(doc(db, 'scenes', cancelledSceneId, 'messages', 'msg-to-cancelled'), {
+          senderId: attendeeUid,
+          senderDisplayName: 'Bilal Guest',
+          text: 'Is this still happening?',
+          createdAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('14. Approved members CAN read history in a CANCELLED scene', async () => {
+      await seedChatData();
+      const db = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertSucceeds(getDoc(doc(db, 'scenes', cancelledSceneId, 'messages', 'msg-cancelled-001')));
+    });
+
+    test('15. Updating an existing message is strictly forbidden', async () => {
+      await seedChatData();
+      const hostDb = testEnv.authenticatedContext(hostUid).firestore();
+      await assertFails(
+        updateDoc(doc(hostDb, 'scenes', chatSceneId, 'messages', msgId), {
+          text: 'Updated text'
+        })
+      );
+    });
+
+    test('16. Deleting an existing message is strictly forbidden', async () => {
+      await seedChatData();
+      const hostDb = testEnv.authenticatedContext(hostUid).firestore();
+      await assertFails(deleteDoc(doc(hostDb, 'scenes', chatSceneId, 'messages', msgId)));
+    });
+  });
+
+  describe('Phase 3.5: In-App Notification Read States Security Rules', () => {
+    const testNotifId = 'host_req_scene123_attendee456_1699000000000';
+
+    beforeEach(async () => {
+      // Seed user profiles
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, 'users', hostUid), {
+          displayName: 'Ali Host',
+          bio: 'Host bio',
+          city: 'Lahore',
+          area: 'Gulberg III',
+          interests: ['chai', 'sports'],
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+        await setDoc(doc(adminDb, 'users', attendeeUid), {
+          displayName: 'Bilal Guest',
+          bio: 'Guest bio',
+          city: 'Lahore',
+          area: 'DHA Phase 5',
+          interests: ['music'],
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      });
+    });
+
+    test('1. Authenticated user CAN create their own notificationState with valid fields', async () => {
+      const userDb = testEnv.authenticatedContext(hostUid).firestore();
+      await assertSucceeds(
+        setDoc(doc(userDb, 'users', hostUid, 'notificationStates', testNotifId), {
+          notificationId: testNotifId,
+          readAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('2. Authenticated user CAN get and list their own notificationStates', async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, 'users', hostUid, 'notificationStates', testNotifId), {
+          notificationId: testNotifId,
+          readAt: Timestamp.now()
+        });
+      });
+
+      const userDb = testEnv.authenticatedContext(hostUid).firestore();
+      await assertSucceeds(getDoc(doc(userDb, 'users', hostUid, 'notificationStates', testNotifId)));
+      await assertSucceeds(getDocs(collection(userDb, 'users', hostUid, 'notificationStates')));
+    });
+
+    test('3. Unauthenticated user CANNOT read or create notificationStates', async () => {
+      const unauthDb = testEnv.unauthenticatedContext().firestore();
+      await assertFails(getDoc(doc(unauthDb, 'users', hostUid, 'notificationStates', testNotifId)));
+      await assertFails(
+        setDoc(doc(unauthDb, 'users', hostUid, 'notificationStates', testNotifId), {
+          notificationId: testNotifId,
+          readAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('4. User CANNOT create notificationState in another user path', async () => {
+      const attackerDb = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertFails(
+        setDoc(doc(attackerDb, 'users', hostUid, 'notificationStates', testNotifId), {
+          notificationId: testNotifId,
+          readAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('5. User CANNOT read or list another user notificationStates', async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, 'users', hostUid, 'notificationStates', testNotifId), {
+          notificationId: testNotifId,
+          readAt: Timestamp.now()
+        });
+      });
+
+      const spyDb = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertFails(getDoc(doc(spyDb, 'users', hostUid, 'notificationStates', testNotifId)));
+      await assertFails(getDocs(collection(spyDb, 'users', hostUid, 'notificationStates')));
+    });
+
+    test('6. Creating notificationState with mismatching notificationId vs document ID is rejected', async () => {
+      const userDb = testEnv.authenticatedContext(hostUid).firestore();
+      await assertFails(
+        setDoc(doc(userDb, 'users', hostUid, 'notificationStates', testNotifId), {
+          notificationId: 'different_notif_id',
+          readAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('7. Creating notificationState with extra unauthorized fields is rejected', async () => {
+      const userDb = testEnv.authenticatedContext(hostUid).firestore();
+      await assertFails(
+        setDoc(doc(userDb, 'users', hostUid, 'notificationStates', testNotifId), {
+          notificationId: testNotifId,
+          readAt: serverTimestamp(),
+          adminFlag: true
+        })
+      );
+    });
+
+    test('8. Updating an existing notificationState is strictly forbidden', async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, 'users', hostUid, 'notificationStates', testNotifId), {
+          notificationId: testNotifId,
+          readAt: Timestamp.now()
+        });
+      });
+
+      const userDb = testEnv.authenticatedContext(hostUid).firestore();
+      await assertFails(
+        updateDoc(doc(userDb, 'users', hostUid, 'notificationStates', testNotifId), {
+          readAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('9. Deleting an existing notificationState is strictly forbidden', async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, 'users', hostUid, 'notificationStates', testNotifId), {
+          notificationId: testNotifId,
+          readAt: Timestamp.now()
+        });
+      });
+
+      const userDb = testEnv.authenticatedContext(hostUid).firestore();
+      await assertFails(deleteDoc(doc(userDb, 'users', hostUid, 'notificationStates', testNotifId)));
+    });
+  });
+
+  describe('Phase 3.5B: Append-Only Notification Event History Security Rules', () => {
+    const eventId = 'notif-event-abc';
+
+    beforeEach(async () => {
+      await seedBasicData();
+      // Also seed an attendee join request
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, 'scenes', sceneId, 'joinRequests', attendeeUid), {
+          requesterId: attendeeUid,
+          requesterDisplayName: 'Bilal Guest',
+          status: 'pending',
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now()
+        });
+      });
+    });
+
+    test('1. Requester CAN write join_request_received event to scene host', async () => {
+      const requesterDb = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertSucceeds(
+        setDoc(doc(requesterDb, 'users', hostUid, 'notifications', eventId), {
+          id: eventId,
+          recipientId: hostUid,
+          actorId: attendeeUid,
+          actorName: 'Bilal Guest',
+          type: 'join_request_received',
+          sceneId: sceneId,
+          sceneTitle: 'Sunday Morning Chai & Code',
+          title: 'New Join Request: Sunday Morning Chai & Code',
+          body: 'Bilal Guest requested to join "Sunday Morning Chai & Code".',
+          actionRoute: 'my-scenes',
+          read: false,
+          createdAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('2. Stranger CANNOT write join_request_received event without a join request', async () => {
+      const strangerDb = testEnv.authenticatedContext(strangerUid).firestore();
+      await assertFails(
+        setDoc(doc(strangerDb, 'users', hostUid, 'notifications', eventId), {
+          id: eventId,
+          recipientId: hostUid,
+          actorId: strangerUid,
+          actorName: 'Stranger',
+          type: 'join_request_received',
+          sceneId: sceneId,
+          sceneTitle: 'Sunday Morning Chai & Code',
+          title: 'New Join Request',
+          body: 'Stranger requested to join.',
+          actionRoute: 'my-scenes',
+          read: false,
+          createdAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('3. Host CAN write request_approved event to attendee', async () => {
+      const hostDb = testEnv.authenticatedContext(hostUid).firestore();
+      await assertSucceeds(
+        setDoc(doc(hostDb, 'users', attendeeUid, 'notifications', eventId), {
+          id: eventId,
+          recipientId: attendeeUid,
+          actorId: hostUid,
+          actorName: 'Ahmad Host',
+          type: 'request_approved',
+          sceneId: sceneId,
+          sceneTitle: 'Sunday Morning Chai & Code',
+          title: 'Join Request Approved! 🎉',
+          body: 'You are in!',
+          actionRoute: `scene/${sceneId}`,
+          read: false,
+          createdAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('4. Non-host CANNOT forge request_approved event to attendee', async () => {
+      const imposterDb = testEnv.authenticatedContext(attendee2Uid).firestore();
+      await assertFails(
+        setDoc(doc(imposterDb, 'users', attendeeUid, 'notifications', eventId), {
+          id: eventId,
+          recipientId: attendeeUid,
+          actorId: attendee2Uid,
+          actorName: 'Hamza Guest',
+          type: 'request_approved',
+          sceneId: sceneId,
+          sceneTitle: 'Sunday Morning Chai & Code',
+          title: 'Join Request Approved! 🎉',
+          body: 'You are in!',
+          actionRoute: `scene/${sceneId}`,
+          read: false,
+          createdAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('5. Recipient CAN read their own notification history', async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, 'users', attendeeUid, 'notifications', eventId), {
+          id: eventId,
+          recipientId: attendeeUid,
+          actorId: hostUid,
+          type: 'request_approved',
+          sceneId: sceneId,
+          sceneTitle: 'Sunday Morning Chai & Code',
+          title: 'Join Request Approved! 🎉',
+          body: 'You are in!',
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      });
+
+      const attendeeDb = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertSucceeds(getDoc(doc(attendeeDb, 'users', attendeeUid, 'notifications', eventId)));
+      await assertSucceeds(getDocs(collection(attendeeDb, 'users', attendeeUid, 'notifications')));
+    });
+
+    test('6. Other user CANNOT read recipient notifications', async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, 'users', attendeeUid, 'notifications', eventId), {
+          id: eventId,
+          recipientId: attendeeUid,
+          actorId: hostUid,
+          type: 'request_approved',
+          sceneId: sceneId,
+          sceneTitle: 'Sunday Morning Chai & Code',
+          title: 'Join Request Approved! 🎉',
+          body: 'You are in!',
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      });
+
+      const spyDb = testEnv.authenticatedContext(strangerUid).firestore();
+      await assertFails(getDoc(doc(spyDb, 'users', attendeeUid, 'notifications', eventId)));
+      await assertFails(getDocs(collection(spyDb, 'users', attendeeUid, 'notifications')));
+    });
+
+    test('7. Recipient CAN mark notification as read (toggle read and readAt only)', async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, 'users', attendeeUid, 'notifications', eventId), {
+          id: eventId,
+          recipientId: attendeeUid,
+          actorId: hostUid,
+          type: 'request_approved',
+          sceneId: sceneId,
+          sceneTitle: 'Sunday Morning Chai & Code',
+          title: 'Join Request Approved! 🎉',
+          body: 'You are in!',
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      });
+
+      const attendeeDb = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertSucceeds(
+        updateDoc(doc(attendeeDb, 'users', attendeeUid, 'notifications', eventId), {
+          read: true,
+          readAt: serverTimestamp()
+        })
+      );
+    });
+
+    test('8. Recipient CANNOT tamper with notification body or title', async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, 'users', attendeeUid, 'notifications', eventId), {
+          id: eventId,
+          recipientId: attendeeUid,
+          actorId: hostUid,
+          type: 'request_approved',
+          sceneId: sceneId,
+          sceneTitle: 'Sunday Morning Chai & Code',
+          title: 'Join Request Approved! 🎉',
+          body: 'You are in!',
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      });
+
+      const attendeeDb = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertFails(
+        updateDoc(doc(attendeeDb, 'users', attendeeUid, 'notifications', eventId), {
+          title: 'Forged Title'
+        })
+      );
+    });
+
+    test('9. Notification events CANNOT be deleted (immutable event history)', async () => {
+      await testEnv.withSecurityRulesDisabled(async context => {
+        const adminDb = context.firestore();
+        await setDoc(doc(adminDb, 'users', attendeeUid, 'notifications', eventId), {
+          id: eventId,
+          recipientId: attendeeUid,
+          actorId: hostUid,
+          type: 'request_approved',
+          sceneId: sceneId,
+          sceneTitle: 'Sunday Morning Chai & Code',
+          title: 'Join Request Approved! 🎉',
+          body: 'You are in!',
+          read: false,
+          createdAt: Timestamp.now()
+        });
+      });
+
+      const attendeeDb = testEnv.authenticatedContext(attendeeUid).firestore();
+      await assertFails(deleteDoc(doc(attendeeDb, 'users', attendeeUid, 'notifications', eventId)));
+    });
+  });
 });
+
 

@@ -200,3 +200,33 @@ export function formatFirestoreScene(docId: string, data: any, currentUserId?: s
     updatedAt: data.updatedAt
   };
 }
+
+export function formatKarachiDateTime(dateOrTimestamp: any): string {
+  if (!dateOrTimestamp) return '';
+  const date = dateOrTimestamp?.toDate ? dateOrTimestamp.toDate() : new Date(dateOrTimestamp);
+  if (isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-PK', {
+    timeZone: 'Asia/Karachi',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  }).format(date) + ' PKT';
+}
+
+export function formatTimeAgo(dateOrTimestamp: any): string {
+  if (!dateOrTimestamp) return 'Recently';
+  const date = dateOrTimestamp?.toDate ? dateOrTimestamp.toDate() : new Date(dateOrTimestamp);
+  if (isNaN(date.getTime())) return 'Recently';
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 0) return 'Just now';
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
